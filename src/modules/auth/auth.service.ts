@@ -1,0 +1,359 @@
+import { db } from "../../db/knex.js";
+import { passwordUtils } from "../../utils/password.js";
+import { jwtUtils } from "../../utils/jwt.js";
+import type { SignupRetailRequest, LoginRequest, WholesaleApplicationRequest } from "./auth.validation.js";
+
+export interface User {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  company: string | null;
+  role: "retail" | "wholesale";
+  is_approved: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface UserRecord extends User {
+  password_hash: string;
+}
+
+export interface WholesaleApplication {
+  id: number;
+  business_name: string;
+  contact_name: string;
+  email: string;
+  phone: string;
+  business_type: string;
+  monthly_volume: number;
+  source: string | null;
+  status: "pending" | "approved" | "rejected";
+  rejection_reason: string | null;
+  user_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface InsertIdRow {
+  id: number;
+}
+
+export const authService = {
+  getUserPublicColumns() {
+    return [
+      "id",
+      "first_name",
+      "last_name",
+      "email",
+      "phone",
+      "company",
+      "role",
+      "is_approved",
+      "created_at",
+      "updated_at"
+    ];
+  },
+
+  // Helper: Store refresh token
+  async storeRefreshToken(userId: number, refreshToken: string): Promise<void> {
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+    await db("refresh_tokens").insert({
+      user_id: userId,
+      token: refreshToken,
+      expires_at: expiresAt
+    });
+  },
+
+  // Helper: Generate tokens for user
+  async generateTokensForUser(user: User): Promise<{ accessToken: string; refreshToken: string }> {
+    const payload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      isApproved: user.is_approved
+    };
+
+    const accessToken = jwtUtils.generateAccessToken(payload);
+    const refreshToken = jwtUtils.generateRefreshToken(payload);
+
+    // Store refresh token in database
+    await this.storeRefreshToken(user.id, refreshToken);
+
+    return { accessToken, refreshToken };
+  },
+
+  // Retail signup
+  async signupRetail(data: SignupRetailRequest): Promise<{ user: User }> {
+    // Check if user already exists
+    const existingUser = await db("users").where("email", data.email).first();
+    if (existingUser) {
+      throw new Error("Email already registered");
+    }
+
+    // Hash password
+    const passwordHash = await passwordUtils.hashPassword(data.password);
+
+    // Create user
+    const insertedUser = await db("users")
+      .insert({
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+        phone: data.phone || null,
+        company: data.company || null,
+        password_hash: passwordHash,
+        role: "retail",
+        is_approved: true // Retail users are auto-approved
+      })
+      .returning("id");
+
+    const userId = (insertedUser[0] as InsertIdRow).id;
+
+    // Fetch created user
+    const user = await db("users")
+      .select(this.getUserPublicColumns())
+      .where("id", userId)
+      .first() as User;
+
+    return { user };
+  },
+
+  // Login
+  async login(data: LoginRequest): Promise<{ user: User; accessToken: string; refreshToken: string }> {
+    // Find user by email and role
+    const user = await db("users")
+      .where("email", data.email)
+      .where("role", data.role)
+      .first() as UserRecord | undefined;
+
+    if (!user) {
+      throw new Error("Invalid email or password");
+    }
+
+    // Verify password
+    const isPasswordValid = await passwordUtils.comparePassword(
+      data.password,
+      user.password_hash
+    );
+    if (!isPasswordValid) {
+      throw new Error("Invalid email or password");
+    }
+
+    // Check if wholesale user is approved
+    if (user.role === "wholesale" && !user.is_approved) {
+      throw new Error("Your wholesale account is pending approval");
+    }
+
+    // Generate both tokens
+    const { accessToken, refreshToken } = await this.generateTokensForUser(user);
+
+    const safeUser = await db("users")
+      .select(this.getUserPublicColumns())
+      .where("id", user.id)
+      .first() as User;
+
+    return { user: safeUser, accessToken, refreshToken };
+  },
+
+  // Refresh access token
+  async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+    // Verify refresh token
+    const payload = jwtUtils.verifyRefreshToken(refreshToken);
+
+    // Check if token exists in database and not revoked
+    const tokenRecord = await db("refresh_tokens")
+      .where("token", refreshToken)
+      .where("user_id", payload.userId)
+      .where("is_revoked", false)
+      .first();
+
+    if (!tokenRecord) {
+      throw new Error("Invalid or revoked refresh token");
+    }
+
+    // Check if token is expired
+    if (new Date() > new Date(tokenRecord.expires_at)) {
+      throw new Error("Refresh token has expired");
+    }
+
+    // Get user
+    const user = await db("users")
+      .select(this.getUserPublicColumns())
+      .where("id", payload.userId)
+      .first() as User;
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Generate new tokens
+    const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await this.generateTokensForUser(user);
+
+    // Revoke old refresh token
+    await db("refresh_tokens").where("id", tokenRecord.id).update({ is_revoked: true });
+
+    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+  },
+
+  // Submit wholesale application
+  async submitWholesaleApplication(data: WholesaleApplicationRequest): Promise<WholesaleApplication> {
+    const monthlyVolume = typeof data.monthlyVolume === "number"
+      ? data.monthlyVolume
+      : Number(data.monthlyVolume) || 0;
+    const source = data.source?.trim() || null;
+
+    // Check if email already has a pending/approved application
+    const existingApplication = await db("wholesale_applications")
+      .where("email", data.email)
+      .whereIn("status", ["pending", "approved"])
+      .first();
+
+    if (existingApplication) {
+      throw new Error("You already have a pending or approved application");
+    }
+
+    // Create application
+    const insertedApplication = await db("wholesale_applications")
+      .insert({
+        business_name: data.businessName,
+        contact_name: data.contactName,
+        email: data.email,
+        phone: data.phone,
+        business_type: data.businessType,
+        monthly_volume: monthlyVolume,
+        source,
+        status: "pending"
+      })
+      .returning("id");
+
+    const applicationId = (insertedApplication[0] as InsertIdRow).id;
+
+    // Fetch created application
+    const application = await db("wholesale_applications")
+      .where("id", applicationId)
+      .first() as WholesaleApplication;
+
+    return application;
+  },
+
+  // Get user by ID
+  async getUserById(userId: number): Promise<User | undefined> {
+    const user = await db("users")
+      .select(this.getUserPublicColumns())
+      .where("id", userId)
+      .first() as User | undefined;
+    return user;
+  },
+
+  // Get all wholesale applications (admin)
+  async getAllWholesaleApplications(status?: string): Promise<WholesaleApplication[]> {
+    let query = db("wholesale_applications");
+
+    if (status) {
+      query = query.where("status", status);
+    }
+
+    const applications = await query.orderBy("created_at", "desc") as WholesaleApplication[];
+    return applications;
+  },
+
+  // Get wholesale application by ID (admin)
+  async getWholesaleApplicationById(applicationId: number): Promise<WholesaleApplication | undefined> {
+    const application = await db("wholesale_applications")
+      .where("id", applicationId)
+      .first() as WholesaleApplication | undefined;
+
+    return application;
+  },
+
+  // Approve wholesale application (admin)
+  async approveWholesaleApplication(applicationId: number, password: string): Promise<User> {
+    const application = await this.getWholesaleApplicationById(applicationId);
+
+    if (!application) {
+      throw new Error("Application not found");
+    }
+
+    if (application.status !== "pending") {
+      throw new Error("Only pending applications can be approved");
+    }
+
+    // Check if user already exists for this email
+    let user = await db("users")
+      .select(this.getUserPublicColumns())
+      .where("email", application.email)
+      .first() as User | undefined;
+
+    if (!user) {
+      // Create new wholesale user
+      const passwordHash = await passwordUtils.hashPassword(password);
+      const insertedUser = await db("users")
+        .insert({
+          first_name: application.contact_name.split(" ")[0] || application.contact_name,
+          last_name: application.contact_name.split(" ").slice(1).join(" ") || "User",
+          email: application.email,
+          phone: application.phone,
+          company: application.business_name,
+          password_hash: passwordHash,
+          role: "wholesale",
+          is_approved: true
+        })
+        .returning("id");
+
+      const userId = (insertedUser[0] as InsertIdRow).id;
+
+      user = await db("users")
+        .select(this.getUserPublicColumns())
+        .where("id", userId)
+        .first() as User;
+    } else if (user.role !== "wholesale") {
+      throw new Error("User with this email already exists as a different role");
+    } else {
+      // Update existing user to approve
+      await db("users").where("id", user.id).update({ is_approved: true });
+      user = await db("users")
+        .select(this.getUserPublicColumns())
+        .where("id", user.id)
+        .first() as User;
+    }
+
+    // Update application status
+    await db("wholesale_applications")
+      .where("id", applicationId)
+      .update({
+        status: "approved",
+        user_id: user.id
+      });
+
+    return user;
+  },
+
+  // Reject wholesale application (admin)
+  async rejectWholesaleApplication(applicationId: number, rejectionReason: string): Promise<WholesaleApplication> {
+    const application = await this.getWholesaleApplicationById(applicationId);
+
+    if (!application) {
+      throw new Error("Application not found");
+    }
+
+    if (application.status !== "pending") {
+      throw new Error("Only pending applications can be rejected");
+    }
+
+    await db("wholesale_applications")
+      .where("id", applicationId)
+      .update({
+        status: "rejected",
+        rejection_reason: rejectionReason
+      });
+
+    const updatedApplication = await db("wholesale_applications")
+      .where("id", applicationId)
+      .first() as WholesaleApplication;
+
+    return updatedApplication;
+  }
+};

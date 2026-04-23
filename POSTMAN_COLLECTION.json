@@ -1,0 +1,305 @@
+{
+  "info": {
+    "name": "USA Peptide Bar API",
+    "description": "Complete API documentation for USA Peptide Bar Authentication System",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health & Welcome",
+      "item": [
+        {
+          "name": "Welcome Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:4000/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": [""]
+            },
+            "description": "Welcome message for the API"
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:4000/api/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "health"]
+            },
+            "description": "Check if API is running"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Signup (Retail)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"SecurePassword123!\",\n  \"confirmPassword\": \"SecurePassword123!\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:4000/api/auth/signup",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "auth", "signup"]
+            },
+            "description": "Create a new retail user account"
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"SecurePassword123!\",\n  \"role\": \"retail\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:4000/api/auth/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login with email and password. Returns JWT token."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_JWT_TOKEN_HERE",
+                "description": "JWT token from login response"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/api/auth/me",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Get the profile of the authenticated user. Requires valid JWT token."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Wholesale",
+      "item": [
+        {
+          "name": "Submit Wholesale Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"Elite Pharm Distributors\",\n  \"contactName\": \"Jane Smith\",\n  \"email\": \"jane@elitepharm.com\",\n  \"phone\": \"+1-555-0123\",\n  \"businessType\": \"Retailer\",\n  \"monthlyVolume\": 5000,\n  \"source\": \"Google Search\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:4000/api/auth/wholesale/apply",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "auth", "wholesale", "apply"]
+            },
+            "description": "Submit a wholesale account application. Public endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Wholesale Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_JWT_TOKEN_HERE",
+                "description": "JWT token from login response"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/api/auth/wholesale/verify",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "auth", "wholesale", "verify"]
+            },
+            "description": "Verify wholesale user status. Only for approved wholesale users. Requires valid JWT token."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin - Wholesale Management",
+      "item": [
+        {
+          "name": "Get All Wholesale Applications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_JWT_TOKEN_HERE",
+                "description": "JWT token from login response"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/api/auth/admin/applications?status=pending",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "auth", "admin", "applications"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "Filter by status: 'pending', 'approved', or 'rejected' (optional)"
+                }
+              ]
+            },
+            "description": "Get all wholesale applications. Optional status filter. Requires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Wholesale Application by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_JWT_TOKEN_HERE",
+                "description": "JWT token from login response"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/api/auth/admin/applications/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "auth", "admin", "applications", "1"]
+            },
+            "description": "Get a specific wholesale application by its ID. Requires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Wholesale Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_JWT_TOKEN_HERE",
+                "description": "JWT token from login response"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"InitialPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:4000/api/auth/admin/applications/1/approve",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "auth", "admin", "applications", "1", "approve"]
+            },
+            "description": "Approve a wholesale application and create user account. Requires password for the new account. Requires authentication."
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Wholesale Application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_JWT_TOKEN_HERE",
+                "description": "JWT token from login response"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rejectionReason\": \"Tax ID verification failed\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:4000/api/auth/admin/applications/1/reject",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "auth", "admin", "applications", "1", "reject"]
+            },
+            "description": "Reject a wholesale application with a reason. Requires authentication."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string",
+      "description": "Store your JWT token here after login"
+    }
+  ]
+}
