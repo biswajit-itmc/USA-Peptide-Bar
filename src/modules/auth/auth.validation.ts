@@ -14,6 +14,11 @@ export interface LoginRequest {
   role: "retail" | "wholesale";
 }
 
+export interface AdminLoginRequest {
+  email: string;
+  password: string;
+}
+
 export interface WholesaleApplicationRequest {
   businessName: string;
   contactName: string;
@@ -110,6 +115,25 @@ export const authValidation = {
 
     if (!data.role || !["retail", "wholesale"].includes(data.role)) {
       errors.role = "Valid role (retail or wholesale) is required";
+    }
+
+    return {
+      valid: Object.keys(errors).length === 0,
+      errors
+    };
+  },
+
+  validateAdminLogin(data: AdminLoginRequest): { valid: boolean; errors: Record<string, string> } {
+    const errors: Record<string, string> = {};
+
+    if (!data.email?.trim()) {
+      errors.email = "Email is required";
+    } else if (!this.validateEmail(data.email)) {
+      errors.email = "Invalid email format";
+    }
+
+    if (!data.password) {
+      errors.password = "Password is required";
     }
 
     return {

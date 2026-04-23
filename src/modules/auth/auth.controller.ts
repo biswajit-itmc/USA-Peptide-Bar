@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { authService } from "./auth.service.js";
-import { authValidation, type SignupRetailRequest, type LoginRequest, type WholesaleApplicationRequest } from "./auth.validation.js";
+import { authValidation, type SignupRetailRequest, type LoginRequest, type AdminLoginRequest, type WholesaleApplicationRequest } from "./auth.validation.js";
 import { responseHandler } from "../../utils/response.js";
 
 export const authController = {
@@ -66,6 +66,29 @@ export const authController = {
     }
   },
 
+  async adminLogin(req: Request, res: Response): Promise<void> {
+    try {
+      const data = req.body as AdminLoginRequest;
+
+      const validation = authValidation.validateAdminLogin(data);
+      if (!validation.valid) {
+        responseHandler.badRequest(res, "Validation failed", JSON.stringify(validation.errors));
+        return;
+      }
+
+      const result = await authService.adminLogin(data);
+
+      responseHandler.ok(res, "Admin login successful", {
+        admin: result.admin,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Admin login failed";
+      responseHandler.unauthorized(res, message);
+    }
+  },
+
   // Refresh access token
   async refreshAccessToken(req: Request, res: Response): Promise<void> {
     try {
@@ -84,6 +107,33 @@ export const authController = {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Token refresh failed";
+
+      if (message.includes("Invalid") || message.includes("expired")) {
+        responseHandler.unauthorized(res, message);
+        return;
+      }
+
+      responseHandler.serverError(res, message);
+    }
+  },
+
+  async refreshAdminAccessToken(req: Request, res: Response): Promise<void> {
+    try {
+      const { refreshToken } = req.body as { refreshToken: string };
+
+      if (!refreshToken) {
+        responseHandler.badRequest(res, "Refresh token is required");
+        return;
+      }
+
+      const result = await authService.refreshAdminAccessToken(refreshToken);
+
+      responseHandler.ok(res, "Admin token refreshed successfully", {
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Admin token refresh failed";
 
       if (message.includes("Invalid") || message.includes("expired")) {
         responseHandler.unauthorized(res, message);
@@ -140,6 +190,27 @@ export const authController = {
       responseHandler.ok(res, "User profile retrieved", user);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to get user profile";
+      responseHandler.serverError(res, message);
+    }
+  },
+
+  async getCurrentAdmin(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.admin) {
+        responseHandler.unauthorized(res, "Admin not authenticated");
+        return;
+      }
+
+      const admin = await authService.getAdminById(req.admin.userId);
+
+      if (!admin) {
+        responseHandler.notFound(res, "Admin not found");
+        return;
+      }
+
+      responseHandler.ok(res, "Admin profile retrieved", admin);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to get admin profile";
       responseHandler.serverError(res, message);
     }
   },

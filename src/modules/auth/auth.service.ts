@@ -1,7 +1,7 @@
 import { db } from "../../db/knex.js";
 import { passwordUtils } from "../../utils/password.js";
 import { jwtUtils } from "../../utils/jwt.js";
-import type { SignupRetailRequest, LoginRequest, WholesaleApplicationRequest } from "./auth.validation.js";
+import type { SignupRetailRequest, LoginRequest, AdminLoginRequest, WholesaleApplicationRequest } from "./auth.validation.js";
 
 export interface User {
   id: number;
@@ -36,8 +36,21 @@ export interface WholesaleApplication {
   updated_at: string;
 }
 
+export interface Admin {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface InsertIdRow {
   id: number;
+}
+
+interface AdminRecord extends Admin {
+  password_hash: string;
 }
 
 export const authService = {
@@ -56,6 +69,17 @@ export const authService = {
     ];
   },
 
+  getAdminPublicColumns() {
+    return [
+      "id",
+      "first_name",
+      "last_name",
+      "email",
+      "created_at",
+      "updated_at"
+    ];
+  },
+
   // Helper: Store refresh token
   async storeRefreshToken(userId: number, refreshToken: string): Promise<void> {
     const expiresAt = new Date();
@@ -63,6 +87,17 @@ export const authService = {
 
     await db("refresh_tokens").insert({
       user_id: userId,
+      token: refreshToken,
+      expires_at: expiresAt
+    });
+  },
+
+  async storeAdminRefreshToken(adminId: number, refreshToken: string): Promise<void> {
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    await db("admin_refresh_tokens").insert({
+      admin_id: adminId,
       token: refreshToken,
       expires_at: expiresAt
     });
@@ -82,6 +117,22 @@ export const authService = {
 
     // Store refresh token in database
     await this.storeRefreshToken(user.id, refreshToken);
+
+    return { accessToken, refreshToken };
+  },
+
+  async generateTokensForAdmin(admin: Admin): Promise<{ accessToken: string; refreshToken: string }> {
+    const payload = {
+      userId: admin.id,
+      email: admin.email,
+      role: "admin" as const,
+      isApproved: true
+    };
+
+    const accessToken = jwtUtils.generateAccessToken(payload);
+    const refreshToken = jwtUtils.generateRefreshToken(payload);
+
+    await this.storeAdminRefreshToken(admin.id, refreshToken);
 
     return { accessToken, refreshToken };
   },
@@ -159,6 +210,29 @@ export const authService = {
     return { user: safeUser, accessToken, refreshToken };
   },
 
+  async adminLogin(data: AdminLoginRequest): Promise<{ admin: Admin; accessToken: string; refreshToken: string }> {
+    const admin = await db("admins")
+      .where("email", data.email)
+      .first() as AdminRecord | undefined;
+
+    if (!admin) {
+      throw new Error("Invalid email or password");
+    }
+
+    const isPasswordValid = await passwordUtils.comparePassword(data.password, admin.password_hash);
+    if (!isPasswordValid) {
+      throw new Error("Invalid email or password");
+    }
+
+    const { accessToken, refreshToken } = await this.generateTokensForAdmin(admin);
+    const safeAdmin = await db("admins")
+      .select(this.getAdminPublicColumns())
+      .where("id", admin.id)
+      .first() as Admin;
+
+    return { admin: safeAdmin, accessToken, refreshToken };
+  },
+
   // Refresh access token
   async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
     // Verify refresh token
@@ -194,6 +268,43 @@ export const authService = {
 
     // Revoke old refresh token
     await db("refresh_tokens").where("id", tokenRecord.id).update({ is_revoked: true });
+
+    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+  },
+
+  async refreshAdminAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+    const payload = jwtUtils.verifyRefreshToken(refreshToken);
+
+    if (payload.role !== "admin") {
+      throw new Error("Invalid admin refresh token");
+    }
+
+    const tokenRecord = await db("admin_refresh_tokens")
+      .where("token", refreshToken)
+      .where("admin_id", payload.userId)
+      .where("is_revoked", false)
+      .first();
+
+    if (!tokenRecord) {
+      throw new Error("Invalid or revoked refresh token");
+    }
+
+    if (new Date() > new Date(tokenRecord.expires_at)) {
+      throw new Error("Refresh token has expired");
+    }
+
+    const admin = await db("admins")
+      .select(this.getAdminPublicColumns())
+      .where("id", payload.userId)
+      .first() as Admin;
+
+    if (!admin) {
+      throw new Error("Admin not found");
+    }
+
+    const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await this.generateTokensForAdmin(admin);
+
+    await db("admin_refresh_tokens").where("id", tokenRecord.id).update({ is_revoked: true });
 
     return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   },
@@ -246,6 +357,15 @@ export const authService = {
       .where("id", userId)
       .first() as User | undefined;
     return user;
+  },
+
+  async getAdminById(adminId: number): Promise<Admin | undefined> {
+    const admin = await db("admins")
+      .select(this.getAdminPublicColumns())
+      .where("id", adminId)
+      .first() as Admin | undefined;
+
+    return admin;
   },
 
   // Get all wholesale applications (admin)

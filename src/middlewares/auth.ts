@@ -6,6 +6,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: JwtPayload;
+      admin?: JwtPayload;
     }
   }
 }
@@ -22,6 +23,12 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction):
     const token = authHeader.slice(7);
 
     const payload = jwtUtils.verifyToken(token);
+
+    if (payload.role === "admin") {
+      responseHandler.forbidden(res, "Admin token cannot be used on user routes");
+      return;
+    }
+
     req.user = payload;
 
     next();
@@ -37,13 +44,37 @@ export const roleMiddleware = (...allowedRoles: ("retail" | "wholesale")[]) => {
       return;
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    if (req.user.role === "admin" || !allowedRoles.includes(req.user.role)) {
       responseHandler.forbidden(res, `Access denied. Only ${allowedRoles.join(", ")} users can access this resource`);
       return;
     }
 
     next();
   };
+};
+
+export const adminAuthMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader?.startsWith("Bearer ")) {
+      responseHandler.unauthorized(res, "Missing or invalid authorization header");
+      return;
+    }
+
+    const token = authHeader.slice(7);
+    const payload = jwtUtils.verifyToken(token);
+
+    if (payload.role !== "admin") {
+      responseHandler.forbidden(res, "Only admin users can access this resource");
+      return;
+    }
+
+    req.admin = payload;
+    next();
+  } catch (error) {
+    responseHandler.unauthorized(res, "Invalid or expired token");
+  }
 };
 
 export const approvedWholesaleMiddleware = (req: Request, res: Response, next: NextFunction): void => {

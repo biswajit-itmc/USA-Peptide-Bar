@@ -34,6 +34,8 @@ async function setupDatabase() {
 
     // Drop existing tables if any (for fresh setup)
     console.log('🗑️  Dropping existing tables...');
+    await client.query('DROP TABLE IF EXISTS admin_refresh_tokens CASCADE;');
+    await client.query('DROP TABLE IF EXISTS admins CASCADE;');
     await client.query('DROP TABLE IF EXISTS refresh_tokens CASCADE;');
     await client.query('DROP TABLE IF EXISTS wholesale_applications CASCADE;');
     await client.query('DROP TABLE IF EXISTS users CASCADE;');
@@ -62,6 +64,23 @@ async function setupDatabase() {
     await client.query('CREATE INDEX idx_users_email ON users(email);');
     await client.query('CREATE INDEX idx_users_role ON users(role);');
     await client.query('CREATE INDEX idx_users_created_at ON users(created_at);');
+
+    // Create admins table
+    console.log('Creating admins table...');
+    await client.query(`
+      CREATE TABLE admins (
+        id SERIAL PRIMARY KEY,
+        first_name VARCHAR(255) NOT NULL,
+        last_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
+    `);
+    console.log('admins table created');
+    await client.query('CREATE INDEX idx_admins_email ON admins(email);');
+    await client.query('CREATE INDEX idx_admins_created_at ON admins(created_at);');
 
     // Create wholesale_applications table
     console.log('📝 Creating wholesale_applications table...');
@@ -108,6 +127,23 @@ async function setupDatabase() {
     // Create indexes on refresh_tokens
     await client.query('CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);');
     await client.query('CREATE INDEX idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);');
+
+    // Create admin_refresh_tokens table
+    console.log('Creating admin_refresh_tokens table...');
+    await client.query(`
+      CREATE TABLE admin_refresh_tokens (
+        id SERIAL PRIMARY KEY,
+        admin_id INTEGER NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+        token TEXT NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        is_revoked BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
+    `);
+    console.log('admin_refresh_tokens table created');
+    await client.query('CREATE INDEX idx_admin_refresh_tokens_admin_id ON admin_refresh_tokens(admin_id);');
+    await client.query('CREATE INDEX idx_admin_refresh_tokens_expires_at ON admin_refresh_tokens(expires_at);');
 
     console.log('\n✅ All tables created successfully!\n');
 

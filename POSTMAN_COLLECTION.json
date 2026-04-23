@@ -97,6 +97,56 @@
           "response": []
         },
         {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"AdminPass123!\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:4000/api/auth/admin/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "auth", "admin", "login"]
+            },
+            "description": "Login with a separate admin account from the admins table."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"PASTE_ADMIN_REFRESH_TOKEN_HERE\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:4000/api/auth/admin/refresh",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "auth", "admin", "refresh"]
+            },
+            "description": "Refresh an admin access token."
+          },
+          "response": []
+        },
+        {
           "name": "Get Current User Profile",
           "request": {
             "method": "GET",
@@ -176,6 +226,28 @@
       "name": "Admin - Wholesale Management",
       "item": [
         {
+          "name": "Get Current Admin Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_ADMIN_JWT_TOKEN_HERE",
+                "description": "JWT token from admin login response"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/api/auth/admin/me",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "auth", "admin", "me"]
+            },
+            "description": "Get the profile of the authenticated admin."
+          },
+          "response": []
+        },
+        {
           "name": "Get All Wholesale Applications",
           "request": {
             "method": "GET",
@@ -200,7 +272,7 @@
                 }
               ]
             },
-            "description": "Get all wholesale applications. Optional status filter. Requires authentication."
+            "description": "Get all wholesale applications. Optional status filter. Requires admin authentication."
           },
           "response": []
         },
@@ -222,7 +294,7 @@
               "port": "3000",
               "path": ["api", "auth", "admin", "applications", "1"]
             },
-            "description": "Get a specific wholesale application by its ID. Requires authentication."
+            "description": "Get a specific wholesale application by its ID. Requires admin authentication."
           },
           "response": []
         },
@@ -252,7 +324,7 @@
               "port": "3000",
               "path": ["api", "auth", "admin", "applications", "1", "approve"]
             },
-            "description": "Approve a wholesale application and create user account. Requires password for the new account. Requires authentication."
+            "description": "Approve a wholesale application and create user account. Requires password for the new account. Requires admin authentication."
           },
           "response": []
         },
@@ -282,7 +354,7 @@
               "port": "3000",
               "path": ["api", "auth", "admin", "applications", "1", "reject"]
             },
-            "description": "Reject a wholesale application with a reason. Requires authentication."
+            "description": "Reject a wholesale application with a reason. Requires admin authentication."
           },
           "response": []
         }

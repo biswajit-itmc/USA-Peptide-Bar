@@ -3,12 +3,15 @@ import { passwordUtils } from "../../utils/password.js";
 
 export async function seed(knex: Knex): Promise<void> {
   // Deletes ALL existing entries
+  await knex("admin_refresh_tokens").del();
+  await knex("admins").del();
   await knex("wholesale_applications").del();
   await knex("users").del();
 
   // Hash passwords for demo users
   const retailPassword = await passwordUtils.hashPassword("RetailPass123!");
   const wholesalePassword = await passwordUtils.hashPassword("WholesalePass123!");
+  const adminPassword = await passwordUtils.hashPassword("AdminPass123!");
 
   // Inserts seed entries for retail user
   await knex("users").insert([
@@ -31,6 +34,15 @@ export async function seed(knex: Knex): Promise<void> {
       password_hash: wholesalePassword,
       role: "wholesale",
       is_approved: true
+    }
+  ]);
+
+  await knex("admins").insert([
+    {
+      first_name: "System",
+      last_name: "Admin",
+      email: "admin@example.com",
+      password_hash: adminPassword
     }
   ]);
 

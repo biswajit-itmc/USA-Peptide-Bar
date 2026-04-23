@@ -39,6 +39,7 @@ npm run seed:run
 This creates:
 - **Retail user**: `retail@example.com` / `RetailPass123!`
 - **Wholesale user**: `wholesale@example.com` / `WholesalePass123!`
+- **Admin user**: `admin@example.com` / `AdminPass123!`
 - **Sample applications** with pending status
 
 ## 4. Start the Server
@@ -142,7 +143,17 @@ curl -X POST http://localhost:4000/api/auth/wholesale/apply \
 }
 ```
 
-**Step 2:** Admin retrieves all pending applications
+**Step 2:** Admin login
+```bash
+curl -X POST http://localhost:4000/api/auth/admin/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "AdminPass123!"
+  }'
+```
+
+**Step 3:** Admin retrieves all pending applications
 ```bash
 TOKEN="<admin_token>"
 
@@ -150,7 +161,7 @@ curl -X GET "http://localhost:4000/api/auth/admin/applications?status=pending" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-**Step 3:** Admin approves application
+**Step 4:** Admin approves application
 ```bash
 curl -X POST http://localhost:4000/api/auth/admin/applications/1/approve \
   -H "Authorization: Bearer $TOKEN" \
@@ -179,7 +190,7 @@ curl -X POST http://localhost:4000/api/auth/admin/applications/1/approve \
 }
 ```
 
-**Step 4:** Wholesale user logs in
+**Step 5:** Wholesale user logs in
 ```bash
 curl -X POST http://localhost:4000/api/auth/login \
   -H "Content-Type: application/json" \
@@ -190,7 +201,7 @@ curl -X POST http://localhost:4000/api/auth/login \
   }'
 ```
 
-**Step 5:** Wholesale user accesses wholesale endpoint
+**Step 6:** Wholesale user accesses wholesale endpoint
 ```bash
 TOKEN="<wholesale_token>"
 
@@ -374,7 +385,7 @@ npm run seed:run
 
 After the basic system is working, you can:
 
-1. **Add Admin Role**: Extend users table with admin-specific permissions
+1. **Add Admin Permissions**: Extend the separate admins table with finer-grained permissions
 2. **Email Notifications**: Send confirmation/approval emails
 3. **Password Reset**: Implement forgot password flow
 4. **Rate Limiting**: Prevent brute force attacks

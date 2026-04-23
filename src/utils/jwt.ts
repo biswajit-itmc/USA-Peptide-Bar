@@ -5,7 +5,7 @@ import { env } from "../config/env.js";
 export interface JwtPayload {
   userId: number;
   email: string;
-  role: "retail" | "wholesale";
+  role: "retail" | "wholesale" | "admin";
   isApproved: boolean;
   type?: "access" | "refresh";
 }
