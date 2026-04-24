@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_ACCESS_SECRET || "your_secret_key"; // Jo aapne login me use kiya hai
+const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key"; // Jo aapne login me use kiya hai
 
 export const verifyAdmin = (req: Request, res: Response, next: NextFunction) => {
   try {

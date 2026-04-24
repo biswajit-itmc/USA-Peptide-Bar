@@ -19,6 +19,7 @@ export const createProduct = async (req: Request, res: Response) => {
     }
 
     const product = await productService.createProduct(body);
+    console.log("Created Product:", product);
     product.image_url = getImageUrl(req, product.image);
 
     res.status(201).json({
