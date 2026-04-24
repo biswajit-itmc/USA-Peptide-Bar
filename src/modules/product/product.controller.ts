@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import * as productService from "./product.service.js";
 import { productValidation } from "./product.validation.js";
 
+import * as wholesaleService from "../wholesale/wholesale.service.js";
+
 const getImageUrl = (req: Request, filename?: string) => {
   if (!filename) return null;
   return `${req.protocol}://${req.get("host")}/uploads/${filename}`;
@@ -33,30 +35,79 @@ export const createProduct = async (req: Request, res: Response) => {
   }
 };
 
+// export const getAllProducts = async (req: Request, res: Response) => {
+//   try {
+//     const data = await productService.getAllProducts();
+//     const products = data.map((item: any) => ({
+//       ...item,
+//       image_url: getImageUrl(req, item.image),
+//     }));
+//     res.json({ success: true, data: products });
+//   } catch (error) {
+//     res.status(500).json({ message: "Error fetching products" });
+//   }
+// };
+
 export const getAllProducts = async (req: Request, res: Response) => {
   try {
     const data = await productService.getAllProducts();
-    const products = data.map((item: any) => ({
-      ...item,
-      image_url: getImageUrl(req, item.image),
-    }));
+
+    // 👇 har product ke sath wholesale pricing attach karenge
+    const products = await Promise.all(
+      data.map(async (item: any) => {
+        const wholesalePrices = await wholesaleService.getWholesalePrices(item.id);
+
+        return {
+          ...item,
+          image_url: getImageUrl(req, item.image),
+          wholesale_prices: wholesalePrices,
+        };
+      })
+    );
+
     res.json({ success: true, data: products });
   } catch (error) {
     res.status(500).json({ message: "Error fetching products" });
   }
 };
 
+
+
+// export const getProductById = async (req: Request, res: Response) => {
+//   try {
+//     const product = await productService.getProductById(req.params.id[0]);
+//     if (!product) return res.status(404).json({ message: "Product not found" });
+
+//     product.image_url = getImageUrl(req, product.image);
+//     res.json({ success: true, data: product });
+//   } catch (error) {
+//     res.status(500).json({ message: "Error fetching product" });
+//   }
+// };
+
+
 export const getProductById = async (req: Request, res: Response) => {
   try {
-    const product = await productService.getProductById(req.params.id);
+    const product = await productService.getProductById(req.params.id[0]);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
+    // 👇 NEW: wholesale pricing attach karo
+    const wholesalePrices = await wholesaleService.getWholesalePrices(product.id);
+
     product.image_url = getImageUrl(req, product.image);
-    res.json({ success: true, data: product });
+
+    res.json({
+      success: true,
+      data: {
+        ...product,
+        wholesale_prices: wholesalePrices,
+      },
+    });
   } catch (error) {
     res.status(500).json({ message: "Error fetching product" });
   }
 };
+
 
 export const updateProduct = async (req: Request, res: Response) => {
   try {
@@ -68,7 +119,7 @@ export const updateProduct = async (req: Request, res: Response) => {
       body.image = req.file.filename;
     }
 
-    const product = await productService.updateProduct(req.params.id, body);
+    const product = await productService.updateProduct(req.params.id[0], body);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
     product.image_url = getImageUrl(req, product.image);
@@ -80,7 +131,7 @@ export const updateProduct = async (req: Request, res: Response) => {
 
 export const deleteProduct = async (req: Request, res: Response) => {
   try {
-    const product = await productService.deleteProduct(req.params.id);
+    const product = await productService.deleteProduct(req.params.id[0]);
     if (!product) return res.status(404).json({ message: "Product not found" });
     res.json({ success: true, message: "Deleted successfully", data: product });
   } catch (error) {
