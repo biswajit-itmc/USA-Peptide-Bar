@@ -1,12 +1,9 @@
 import { Router } from "express";
 import { authRouter } from "../modules/auth/auth.routes.js";
-import eliteProductsRoutes from "../modules/eliteproducts/eliteproducts.routes.js";
-
-
 
 export const apiRouter = Router();
 
-// API Health Check
+// ✅ Health Check
 apiRouter.get("/health", (_req, res) => {
   res.status(200).json({
     success: true,
@@ -15,13 +12,11 @@ apiRouter.get("/health", (_req, res) => {
   });
 });
 
-// Auth Routes (Login, Logout, etc.)
-// Path: /api/auth/...
+// ✅ Auth Routes
 apiRouter.use("/auth", authRouter);
 apiRouter.use("/eliteproducts", eliteProductsRoutes);
 
-// Yahan aap future mein aur routes add kar sakte hain, jaise:
-// apiRouter.use("/products", productRouter);
-// apiRouter.use("/orders", orderRouter);
+// ✅ Product Routes 👇
+apiRouter.use("/products", productRouter);
 
 export default apiRouter;

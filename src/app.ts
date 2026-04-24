@@ -1,20 +1,24 @@
 import express from "express";
-import cors from "cors"; // 1. CORS import karein
+import cors from "cors";
+import path from "path"; // 👈 path import karein
 import { apiRouter } from "./routes/index.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 
 export const app = express();
 
-// 2. CORS ko routes aur express.json() se PEHLE lagayein
-// Ye browser ki block karne wali policy ko disable kar dega
+// CORS configuration
 app.use(cors({
-  origin: "http://localhost:5173", // Aapke frontend ka address
+  origin: "http://localhost:5173", 
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 🔥 1. YEH LINE ADD KAREIN (Images dikhane ke liye)
+// Iska matlab: Agar koi browser mein "/uploads" par jaye, toh use "uploads" folder ki files dikhao
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // Welcome Route
 app.get("/", (_req, res) => {
