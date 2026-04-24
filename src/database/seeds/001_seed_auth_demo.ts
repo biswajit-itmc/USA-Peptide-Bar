@@ -1,17 +1,18 @@
+import bcrypt from "bcryptjs";
 import type { Knex } from "knex";
-import { passwordUtils } from "../../utils/password.js";
 
 export async function seed(knex: Knex): Promise<void> {
   // Deletes ALL existing entries
   await knex("admin_refresh_tokens").del();
   await knex("admins").del();
+  await knex("refresh_tokens").del();
   await knex("wholesale_applications").del();
   await knex("users").del();
 
   // Hash passwords for demo users
-  const retailPassword = await passwordUtils.hashPassword("RetailPass123!");
-  const wholesalePassword = await passwordUtils.hashPassword("WholesalePass123!");
-  const adminPassword = await passwordUtils.hashPassword("AdminPass123!");
+  const retailPassword = await bcrypt.hash("RetailPass123!", 10);
+  const wholesalePassword = await bcrypt.hash("WholesalePass123!", 10);
+  const adminPassword = await bcrypt.hash("AdminPass123!", 10);
 
   // Inserts seed entries for retail user
   await knex("users").insert([
