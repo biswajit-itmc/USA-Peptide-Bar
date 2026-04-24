@@ -1,5 +1,5 @@
 import type { Knex } from "knex";
-import { env } from "./src/config/env.js";
+import { env } from "./src/config/env.ts";
 
 const sharedConfig: Knex.Config = {
   client: env.db.client,
