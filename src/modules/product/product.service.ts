@@ -2,7 +2,6 @@ import { db } from "../../db/knex.js";
 
 // ✅ Create Product
 export const createProduct = async (body: any) => {
-  // Database mein bhejte waqt ensure karein ki values correct types mein ho
   const insertData = {
     category: body.category,
     name: body.name,
@@ -10,26 +9,19 @@ export const createProduct = async (body: any) => {
     purity: body.purity,
     price: parseFloat(body.price),
     old_price: parseFloat(body.old_price),
-    image: body.image || null
+    image: body.image || null,
+    // Ek hi table mein wholesale fields 👇
+    wholesale_min_qty: body.wholesale_min_qty ? parseInt(body.wholesale_min_qty) : null,
+    wholesale_price: body.wholesale_price ? parseFloat(body.wholesale_price) : null
   };
 
-  /**
-   * CRITICAL FIX FOR POSTGRES:
-   * PostgreSQL mein .returning("id") use karna padta hai 
-   * warna ye pura result object return kar deta hai jo agle query mein crash karta hai.
-   */
-  const result = await db("products")
-    .insert(insertData)
-    .returning("id");
-
-  // PostgreSQL returns: [{ id: 1 }]
+  const result = await db("products").insert(insertData).returning("id");
   const insertedId = result[0]?.id || result[0];
 
   if (!insertedId) {
-    throw new Error("Failed to insert product or retrieve ID");
+    throw new Error("Failed to insert product");
   }
 
-  // Inserted data fetch karein (Return the fresh object)
   return await db("products").where({ id: insertedId }).first();
 };
 
@@ -40,7 +32,6 @@ export const getAllProducts = async () => {
 
 // ✅ Get Product By ID
 export const getProductById = async (id: string | number) => {
-  // Ensure ID is passed as integer
   return await db("products").where({ id: Number(id) }).first();
 };
 
@@ -51,7 +42,6 @@ export const updateProduct = async (id: string | number, body: any) => {
   const exists = await db("products").where({ id: productId }).first();
   if (!exists) return null;
 
-  // Sirf wohi data update karein jo body mein hai
   const updateData: any = {};
   if (body.category) updateData.category = body.category;
   if (body.name) updateData.name = body.name;
@@ -60,10 +50,12 @@ export const updateProduct = async (id: string | number, body: any) => {
   if (body.price) updateData.price = parseFloat(body.price);
   if (body.old_price) updateData.old_price = parseFloat(body.old_price);
   if (body.image) updateData.image = body.image;
+  
+  // Wholesale fields update logic 👇
+  if (body.wholesale_min_qty !== undefined) updateData.wholesale_min_qty = parseInt(body.wholesale_min_qty);
+  if (body.wholesale_price !== undefined) updateData.wholesale_price = parseFloat(body.wholesale_price);
 
-  await db("products")
-    .where({ id: productId })
-    .update(updateData);
+  await db("products").where({ id: productId }).update(updateData);
 
   return await db("products").where({ id: productId }).first();
 };
@@ -71,7 +63,6 @@ export const updateProduct = async (id: string | number, body: any) => {
 // ✅ Delete Product
 export const deleteProduct = async (id: string | number) => {
   const productId = Number(id);
-  
   const product = await db("products").where({ id: productId }).first();
   if (!product) return null;
 
