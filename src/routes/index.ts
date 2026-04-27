@@ -3,6 +3,7 @@ import { authRouter } from "../modules/auth/auth.routes.js";
 import eliteProductsRoutes from "../modules/eliteproducts/eliteproducts.routes.js";
 import productRouter from "../modules/product/product.routes.js";
 import wholesaleRoutes from "../modules/wholesale/wholesale.routes.js";
+import contactRoutes from "../modules/contact/contact.route.js";
 
 
 
@@ -24,5 +25,7 @@ apiRouter.use("/wholesale", wholesaleRoutes);
 
 // ✅ Future: Product Routes can be added here
  apiRouter.use("/products", productRouter);
+
+ apiRouter.use("/message", contactRoutes);
 
 export default apiRouter;
