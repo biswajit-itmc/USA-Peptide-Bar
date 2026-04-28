@@ -8,9 +8,9 @@ export const sendApprovalEmail = async (
     await transporter.sendMail({
       from: `"USA Peptide Bar" <${process.env.EMAIL_USER}>`,
       to,
-      subject: "Your Account is Approved 🎉",
+      subject: "Your Account is Approved",
       html: `
-        <h2>Congratulations 🎉</h2>
+        <h2>Congratulations</h2>
         <p>Your wholesale account has been approved.</p>
 
         <h3>Login Details:</h3>
@@ -37,7 +37,7 @@ export const sendRejectionEmail = async (
     await transporter.sendMail({
       from: `"USA Peptide Bar" <${process.env.EMAIL_USER}>`,
       to,
-      subject: "Your Application was Rejected ❌",
+      subject: "Your Application was Rejected",
       html: `
         <h2>Application Update</h2>
         <p>We regret to inform you that your wholesale application has been rejected.</p>

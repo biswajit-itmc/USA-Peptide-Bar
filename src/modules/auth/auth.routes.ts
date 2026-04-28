@@ -32,6 +32,7 @@ authRouter.get(
 );
 
 // Admin routes - Wholesale management
+authRouter.get("/admin/users", authController.getAllUsers);
 authRouter.get("/admin/applications", adminAuthMiddleware, authController.getAllWholesaleApplications);
 authRouter.get("/admin/applications/:id", adminAuthMiddleware, authController.getWholesaleApplicationById);
 authRouter.post("/admin/applications/:id/approve", adminAuthMiddleware, authController.approveWholesaleApplication);

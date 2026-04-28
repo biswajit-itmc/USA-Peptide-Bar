@@ -481,5 +481,12 @@ export const authService = {
       .first() as WholesaleApplication;
 
     return updatedApplication;
+  },
+
+  async getAllUsers(): Promise<User[]> {
+    const users = await db("users")
+      .select(this.getUserPublicColumns())
+      .orderBy("created_at", "desc") as User[];
+    return users;
   }
 };

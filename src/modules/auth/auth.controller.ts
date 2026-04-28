@@ -314,5 +314,21 @@ export const authController = {
 
       responseHandler.serverError(res, message);
     }
+  },
+async getAllUsers(req: Request, res: Response): Promise<void> {
+  try {
+    console.log("Fetching users..."); // Yeh check karne ke liye ki request yahan tak pahuchi
+    const users = await authService.getAllUsers();
+    console.log("Users found:", users.length);
+    
+    responseHandler.ok(res, "All users retrieved successfully", {
+      total: users.length,
+      users
+    });
+  } catch (error) {
+    console.error("Error in getAllUsers:", error);
+    const message = error instanceof Error ? error.message : "Failed to retrieve users";
+    responseHandler.serverError(res, message);
   }
+},
 };
