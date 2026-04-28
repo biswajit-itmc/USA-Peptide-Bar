@@ -2,6 +2,8 @@ import { db } from "../../db/knex.js";
 import { passwordUtils } from "../../utils/password.js";
 import { jwtUtils } from "../../utils/jwt.js";
 import type { SignupRetailRequest, LoginRequest, AdminLoginRequest, WholesaleApplicationRequest } from "./auth.validation.js";
+import { sendApprovalEmail } from "../../utils/mailer.js";
+import { sendRejectionEmail } from "../../utils/mailer.js";
 
 export interface User {
   id: number;
@@ -448,6 +450,8 @@ export const authService = {
         user_id: user.id
       });
 
+      await sendApprovalEmail(application.email, password);
+
     return user;
   },
 
@@ -469,6 +473,8 @@ export const authService = {
         status: "rejected",
         rejection_reason: rejectionReason
       });
+
+      await sendRejectionEmail(application.email, rejectionReason);
 
     const updatedApplication = await db("wholesale_applications")
       .where("id", applicationId)
