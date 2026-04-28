@@ -4,7 +4,8 @@ import eliteProductsRoutes from "../modules/eliteproducts/eliteproducts.routes.j
 import productRouter from "../modules/product/product.routes.js";
 import wholesaleRoutes from "../modules/wholesale/wholesale.routes.js";
 import contactRoutes from "../modules/contact/contact.route.js";
-
+import userRouter from "../modules/user/user.routes.js";
+import cartRouter from "../modules/cart/cart.routes.js";
 
 
 export const apiRouter = Router();
@@ -20,6 +21,7 @@ apiRouter.get("/health", (_req, res) => {
 
 // ✅ Auth Routes
 apiRouter.use("/auth", authRouter);
+apiRouter.use("/users", userRouter)
 apiRouter.use("/eliteproducts", eliteProductsRoutes);
 apiRouter.use("/wholesale", wholesaleRoutes);
 
@@ -27,5 +29,7 @@ apiRouter.use("/wholesale", wholesaleRoutes);
  apiRouter.use("/products", productRouter);
 
  apiRouter.use("/message", contactRoutes);
+ apiRouter.use("/cart", cartRouter);
+
 
 export default apiRouter;
