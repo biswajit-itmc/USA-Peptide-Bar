@@ -14,9 +14,9 @@ export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: Number(process.env.PORT ?? 4000),
   db: {
-    client: process.env.DB_CLIENT ?? "pg",
+    client: process.env.DB_CLIENT ?? "mysql2",
     host: required(process.env.DB_HOST, "DB_HOST"),
-    port: Number(process.env.DB_PORT ?? 5432),
+    port: Number(process.env.DB_PORT ?? 3306),
     user: required(process.env.DB_USER, "DB_USER"),
     password: required(process.env.DB_PASSWORD, "DB_PASSWORD"),
     name: required(process.env.DB_NAME, "DB_NAME")

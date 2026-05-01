@@ -89,6 +89,30 @@ export const authController = {
     }
   },
 
+  async repLogin(req: Request, res: Response): Promise<void> {
+    try {
+      const data = req.body as { repId: string; password: string };
+
+      const validation = authValidation.validateSalesRepLogin(data);
+      if (!validation.valid) {
+        responseHandler.badRequest(res, "Validation failed", JSON.stringify(validation.errors));
+        return;
+      }
+
+      const result = await authService.repLogin(data);
+
+      responseHandler.ok(res, "Sales rep login successful", {
+        rep: result.rep,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Sales rep login failed";
+      console.error("Sales rep login error:", message);
+      responseHandler.unauthorized(res, message);
+    }
+  },
+
   // Refresh access token
   async refreshAccessToken(req: Request, res: Response): Promise<void> {
     try {
@@ -134,6 +158,33 @@ export const authController = {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Admin token refresh failed";
+
+      if (message.includes("Invalid") || message.includes("expired")) {
+        responseHandler.unauthorized(res, message);
+        return;
+      }
+
+      responseHandler.serverError(res, message);
+    }
+  },
+
+  async repRefreshAccessToken(req: Request, res: Response): Promise<void> {
+    try {
+      const { refreshToken } = req.body as { refreshToken: string };
+
+      if (!refreshToken) {
+        responseHandler.badRequest(res, "Refresh token is required");
+        return;
+      }
+
+      const result = await authService.refreshRepAccessToken(refreshToken);
+
+      responseHandler.ok(res, "Sales rep token refreshed successfully", {
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Sales rep token refresh failed";
 
       if (message.includes("Invalid") || message.includes("expired")) {
         responseHandler.unauthorized(res, message);
@@ -328,6 +379,33 @@ async getAllUsers(req: Request, res: Response): Promise<void> {
   } catch (error) {
     console.error("Error in getAllUsers:", error);
     const message = error instanceof Error ? error.message : "Failed to retrieve users";
+    responseHandler.serverError(res, message);
+  }
+},
+
+async updateProfile(req: Request, res: Response): Promise<void> {
+  try {
+    if (!req.user) {
+      responseHandler.unauthorized(res, "User not authenticated");
+      return;
+    }
+
+    const { fullName, phone } = req.body;
+    
+    // Simple split for first and last name
+    const nameParts = fullName.trim().split(" ");
+    const first_name = nameParts[0];
+    const last_name = nameParts.slice(1).join(" ") || "";
+
+    const user = await authService.updateProfile(req.user.userId, {
+      first_name,
+      last_name,
+      phone
+    });
+
+    responseHandler.ok(res, "Profile updated successfully", user);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to update profile";
     responseHandler.serverError(res, message);
   }
 },

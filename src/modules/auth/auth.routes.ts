@@ -10,10 +10,13 @@ authRouter.post("/login", authController.login);
 authRouter.post("/refresh", authController.refreshAccessToken);
 authRouter.post("/admin/login", authController.adminLogin);
 authRouter.post("/admin/refresh", authController.refreshAdminAccessToken);
+authRouter.post("/rep/login", authController.repLogin);
+authRouter.post("/rep/refresh", authController.repRefreshAccessToken);
 authRouter.post("/wholesale/apply", authController.submitWholesaleApplication);
 
 // Protected routes - Authenticated users
 authRouter.get("/me", authMiddleware, authController.getCurrentUser);
+authRouter.patch("/me", authMiddleware, authController.updateProfile);
 authRouter.get("/admin/me", adminAuthMiddleware, authController.getCurrentAdmin);
 
 // Protected routes - Approved wholesale only

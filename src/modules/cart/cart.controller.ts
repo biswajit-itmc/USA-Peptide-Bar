@@ -6,27 +6,46 @@ export const cartController = {
   // GET /api/cart — user ka cart dikhao
   async getCart(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const { role, userId } = req.user!;
+      
+      if (role !== "retail" && role !== "wholesale") {
+        responseHandler.ok(res, "Cart empty", { totalItems: 0, totalPrice: "0.00", items: [] });
+        return;
+      }
+
       const result = await cartService.getCartSummary(userId);
       responseHandler.ok(res, "Cart retrieved successfully", result);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to get cart";
-      responseHandler.serverError(res, message);
+    } catch (error: any) {
+      console.error("getCart Controller Error:", error);
+      responseHandler.serverError(res, error.message || "Failed to get cart");
     }
   },
 
   // POST /api/cart — item add karo
   async addToCart(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.userId;
-      const { product_id, quantity = 1 } = req.body;
+      console.log("Cart User:", req.user);
+      const { role, userId } = req.user!;
+
+      if (role !== "retail" && role !== "wholesale") {
+        responseHandler.forbidden(res, "Only customers can add items to the cart.");
+        return;
+      }
+
+      const { product_id, quantity = 1, product_table = "products" } = req.body;
 
       if (!product_id) {
         responseHandler.badRequest(res, "product_id is required");
         return;
       }
 
-      const items = await cartService.addToCart(userId, Number(product_id), Number(quantity));
+      // Validation: product_id should be string or number, quantity should be positive integer
+      if (isNaN(Number(quantity)) || Number(quantity) <= 0) {
+        responseHandler.badRequest(res, "Invalid quantity. Must be a positive number.");
+        return;
+      }
+
+      const items = await cartService.addToCart(userId, product_id, Number(quantity), product_table);
       responseHandler.ok(res, "Item added to cart", items);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to add to cart";
@@ -34,6 +53,7 @@ export const cartController = {
         responseHandler.notFound(res, message);
         return;
       }
+      console.error("Cart Error:", error);
       responseHandler.serverError(res, message);
     }
   },

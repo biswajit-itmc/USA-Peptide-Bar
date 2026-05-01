@@ -45,5 +45,45 @@ export const userController = {
     } catch (error) {
       responseHandler.serverError(res, "Error fetching user");
     }
+  },
+
+  async getAddresses(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        responseHandler.unauthorized(res, "Not authenticated");
+        return;
+      }
+      const addresses = await userService.getAddresses(req.user.userId);
+      responseHandler.ok(res, "Addresses retrieved", addresses);
+    } catch (error) {
+      responseHandler.serverError(res, "Failed to get addresses");
+    }
+  },
+
+  async addAddress(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        responseHandler.unauthorized(res, "Not authenticated");
+        return;
+      }
+      const address = await userService.addAddress(req.user.userId, req.body);
+      responseHandler.created(res, "Address added", address);
+    } catch (error) {
+      responseHandler.serverError(res, "Failed to add address");
+    }
+  },
+
+  async deleteAddress(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        responseHandler.unauthorized(res, "Not authenticated");
+        return;
+      }
+      const { id } = req.params;
+      await userService.deleteAddress(req.user.userId, Number(id));
+      responseHandler.ok(res, "Address deleted");
+    } catch (error) {
+      responseHandler.serverError(res, "Failed to delete address");
+    }
   }
 };

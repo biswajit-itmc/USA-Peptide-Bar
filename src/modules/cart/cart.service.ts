@@ -3,52 +3,115 @@ import { db } from "../../db/knex.js";
 export const cartService = {
   // User ka full cart nikalna with product details
   async getCart(userId: number) {
-    const items = await db("cart_items")
-      .join("products", "cart_items.product_id", "products.id")
-      .where("cart_items.user_id", userId)
-      .select(
-        "cart_items.id as cart_item_id",
-        "cart_items.quantity",
-        "products.id as product_id",
-        "products.name",
-        "products.price",
-        "products.old_price",
-        "products.image",
-        "products.category",
-        "products.purity",
-        "products.quantity as product_quantity"
-      )
-      .orderBy("cart_items.created_at", "desc");
+    try {
+      // User ka role check karo
+      const user = await db("users").where({ id: userId }).first();
+      const isWholesale = user?.role === "wholesale";
 
-    return items;
+      // Cart items nikalna
+      const cartItems = await db("cart_items")
+        .where("user_id", userId)
+        .orderBy("created_at", "desc");
+
+      // Har item ke liye details nikalna based on product_table
+      const items = await Promise.all(cartItems.map(async (item) => {
+        try {
+          const table = item.product_table === "eliteselection_products" ? "eliteselection_products" : "products";
+          
+          let query = db(table);
+          if (table === "products") {
+            const numericId = Number(item.product_id);
+            if (isNaN(numericId)) return null; // Skip invalid IDs
+            query = query.where({ id: numericId });
+          } else {
+            query = query.where({ id: String(item.product_id) });
+          }
+
+          const product = await query.first();
+
+          if (!product) return null;
+
+          const price = (isWholesale && product.wholesale_price) ? product.wholesale_price : product.price;
+
+          return {
+            cart_item_id: item.id,
+            quantity: item.quantity,
+            product_id: item.product_id,
+            product_table: item.product_table,
+            name: product.name,
+            price: price || 0,
+            wholesale_price: product.wholesale_price || null,
+            old_price: product.old_price || null,
+            image: product.image || null,
+            image_url: product.image_url || null, 
+            category: product.category || "General",
+            purity: product.purity || "99%",
+            product_quantity: product.quantity || "1"
+          };
+        } catch (e) {
+          console.error(`Error mapping cart item ${item.id}:`, e);
+          return null;
+        }
+      }));
+
+      return items.filter(i => i !== null);
+    } catch (error) {
+      console.error("getCart Error:", error);
+      throw error;
+    }
   },
 
   // Item add karna ya quantity update karna
-  async addToCart(userId: number, productId: number, quantity: number) {
-    // Product exist karta hai?
-    const product = await db("products").where({ id: productId }).first();
-    if (!product) throw new Error("Product not found");
+  async addToCart(userId: number, productId: string | number, quantity: number, productTable: string = "products") {
+    console.log(`Adding to cart: User=${userId}, Product=${productId}, Table=${productTable}, Qty=${quantity}`);
+    
+    // Product exist karta hai? Check in specified table
+    const table = productTable === "eliteselection_products" ? "eliteselection_products" : "products";
+    
+    try {
+      // Safely check for product based on ID type
+      let query = db(table);
+      if (table === "products") {
+        const numericId = Number(productId);
+        if (isNaN(numericId)) {
+          throw new Error(`Invalid ID format for products table: ${productId}`);
+        }
+        query = query.where({ id: numericId });
+      } else {
+        query = query.where({ id: String(productId) });
+      }
 
-    // Already cart mein hai?
-    const existing = await db("cart_items")
-      .where({ user_id: userId, product_id: productId })
-      .first();
+      const product = await query.first();
+      if (!product) {
+        console.error(`Product not found: ${productId} in ${table}`);
+        throw new Error("Product not found");
+      }
 
-    if (existing) {
-      // Quantity update karo
-      await db("cart_items")
-        .where({ user_id: userId, product_id: productId })
-        .update({ quantity: existing.quantity + quantity, updated_at: db.fn.now() });
-    } else {
-      // Naya item add karo
-      await db("cart_items").insert({
-        user_id: userId,
-        product_id: productId,
-        quantity,
-      });
+      // Already cart mein hai?
+      const existing = await db("cart_items")
+        .where({ user_id: userId, product_id: String(productId), product_table: table })
+        .first();
+
+      if (existing) {
+        console.log(`Updating existing item: ${existing.id}`);
+        await db("cart_items")
+          .where({ id: existing.id })
+          .update({ quantity: existing.quantity + quantity, updated_at: db.fn.now() });
+      } else {
+        console.log(`Inserting new item`);
+        await db("cart_items").insert({
+          user_id: userId,
+          product_id: String(productId),
+          product_table: table,
+          quantity,
+        });
+      }
+
+      return await this.getCart(userId);
+    } catch (err) {
+      console.error("addToCart Error:", err);
+      throw err;
     }
-
-    return await this.getCart(userId);
   },
 
   // Quantity update karna
@@ -79,10 +142,16 @@ export const cartService = {
   async getCartSummary(userId: number) {
     const items = await this.getCart(userId);
     const totalItems = items.reduce((sum: number, item: any) => sum + item.quantity, 0);
-    const totalPrice = items.reduce(
-      (sum: number, item: any) => sum + parseFloat(item.price) * item.quantity,
+    const totalPriceNum = items.reduce(
+      (sum: number, item: any) => {
+        const itemPrice = parseFloat(String(item.price)) || 0;
+        return sum + itemPrice * item.quantity;
+      },
       0
     );
-    return { totalItems, totalPrice: totalPrice.toFixed(2), items };
+    
+    console.log(`Cart Summary for ${userId}: Items=${totalItems}, Price=${totalPriceNum}`);
+    
+    return { totalItems, totalPrice: totalPriceNum.toFixed(2), items };
   },
 };

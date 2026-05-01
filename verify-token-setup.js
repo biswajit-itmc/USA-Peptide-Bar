@@ -1,40 +1,38 @@
-import pkg from 'pg';
-const { Client } = pkg;
+import mysql from 'mysql2/promise';
 
-const client = new Client({
+const connection = await mysql.createConnection({
   host: 'localhost',
-  port: 5432,
-  user: 'postgres',
-  password: 'qwerty@5432#',
-  database: 'usapeptide'
+  port: 3306,
+  user: 'root',
+  password: 'root',
+  database: 'USAPEPTIDE'
 });
 
 async function verifySetup() {
   try {
-    await client.connect();
     console.log('🔍 Verifying token system setup:\n');
     
     // Check refresh_tokens table
-    const tableResult = await client.query(`
+    const [tableSchema] = await connection.query(`
       SELECT column_name, data_type, is_nullable
       FROM information_schema.columns 
-      WHERE table_name = 'refresh_tokens'
+      WHERE table_schema = 'USAPEPTIDE' AND table_name = 'refresh_tokens'
       ORDER BY ordinal_position;
     `);
     
     console.log('✅ refresh_tokens Table Schema:');
-    tableResult.rows.forEach(row => {
-      console.log(`   ${row.column_name}: ${row.data_type} ${row.is_nullable === 'NO' ? 'NOT NULL' : ''}`);
+    tableSchema.forEach(row => {
+      console.log(`   ${row.COLUMN_NAME}: ${row.DATA_TYPE} ${row.IS_NULLABLE === 'NO' ? 'NOT NULL' : ''}`);
     });
     
     // Check if any refresh tokens exist
-    const tokenCount = await client.query('SELECT COUNT(*) as count FROM refresh_tokens;');
-    console.log(`\n✅ Current refresh tokens: ${tokenCount.rows[0].count}`);
+    const [tokenCount] = await connection.query('SELECT COUNT(*) as count FROM refresh_tokens;');
+    console.log(`\n✅ Current refresh tokens: ${tokenCount[0].count}`);
     
     // List users for testing
-    const usersResult = await client.query('SELECT id, email, role FROM users;');
+    const [users] = await connection.query('SELECT id, email, role FROM users;');
     console.log('\n👥 Test Users:');
-    usersResult.rows.forEach(user => {
+    users.forEach(user => {
       console.log(`   ID: ${user.id}, Email: ${user.email}, Role: ${user.role}`);
     });
     
@@ -43,7 +41,7 @@ async function verifySetup() {
   } catch (error) {
     console.error('❌ Error:', error.message);
   } finally {
-    await client.end();
+    await connection.end();
   }
 }
 

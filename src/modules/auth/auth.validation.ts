@@ -19,6 +19,11 @@ export interface AdminLoginRequest {
   password: string;
 }
 
+export interface SalesRepLoginRequest {
+  repId: string;
+  password: string;
+}
+
 export interface WholesaleApplicationRequest {
   businessName: string;
   contactName: string;
@@ -26,6 +31,7 @@ export interface WholesaleApplicationRequest {
   phone: string;
   businessType: string;
   monthlyVolume: number | string;
+  repId?: string;
   source?: string;
 }
 
@@ -130,6 +136,23 @@ export const authValidation = {
       errors.email = "Email is required";
     } else if (!this.validateEmail(data.email)) {
       errors.email = "Invalid email format";
+    }
+
+    if (!data.password) {
+      errors.password = "Password is required";
+    }
+
+    return {
+      valid: Object.keys(errors).length === 0,
+      errors
+    };
+  },
+
+  validateSalesRepLogin(data: SalesRepLoginRequest): { valid: boolean; errors: Record<string, string> } {
+    const errors: Record<string, string> = {};
+
+    if (!data.repId?.trim()) {
+      errors.repId = "Identity Number (Rep ID) is required";
     }
 
     if (!data.password) {

@@ -55,6 +55,21 @@ interface AdminRecord extends Admin {
   password_hash: string;
 }
 
+export interface SalesRep {
+  id: number;
+  rep_id: string;
+  name: string;
+  email: string;
+  commission_rate: number;
+  role: "sales_rep";
+  created_at: string;
+  updated_at: string;
+}
+
+interface SalesRepRecord extends SalesRep {
+  password_hash: string;
+}
+
 export const authService = {
   getUserPublicColumns() {
     return [
@@ -82,6 +97,19 @@ export const authService = {
     ];
   },
 
+  getSalesRepPublicColumns() {
+    return [
+      "id",
+      "rep_id",
+      "name",
+      "email",
+      "commission_rate",
+      "role",
+      "created_at",
+      "updated_at"
+    ];
+  },
+
   // Helper: Store refresh token
   async storeRefreshToken(userId: number, refreshToken: string): Promise<void> {
     const expiresAt = new Date();
@@ -100,6 +128,17 @@ export const authService = {
 
     await db("admin_refresh_tokens").insert({
       admin_id: adminId,
+      token: refreshToken,
+      expires_at: expiresAt
+    });
+  },
+
+  async storeSalesRepRefreshToken(repId: number, refreshToken: string): Promise<void> {
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    await db("sales_rep_refresh_tokens").insert({
+      rep_id: repId,
       token: refreshToken,
       expires_at: expiresAt
     });
@@ -139,6 +178,22 @@ export const authService = {
     return { accessToken, refreshToken };
   },
 
+  async generateTokensForRep(rep: SalesRep): Promise<{ accessToken: string; refreshToken: string }> {
+    const payload = {
+      userId: rep.id,
+      email: rep.email,
+      role: "sales_rep" as const,
+      isApproved: true
+    };
+
+    const accessToken = jwtUtils.generateAccessToken(payload);
+    const refreshToken = jwtUtils.generateRefreshToken(payload);
+
+    await this.storeSalesRepRefreshToken(rep.id, refreshToken);
+
+    return { accessToken, refreshToken };
+  },
+
   // Retail signup
   async signupRetail(data: SignupRetailRequest): Promise<{ user: User }> {
     // Check if user already exists
@@ -151,7 +206,7 @@ export const authService = {
     const passwordHash = await passwordUtils.hashPassword(data.password);
 
     // Create user
-    const insertedUser = await db("users")
+    const [userId] = await db("users")
       .insert({
         first_name: data.firstName,
         last_name: data.lastName,
@@ -161,10 +216,7 @@ export const authService = {
         password_hash: passwordHash,
         role: "retail",
         is_approved: true // Retail users are auto-approved
-      })
-      .returning("id");
-
-    const userId = (insertedUser[0] as InsertIdRow).id;
+      });
 
     // Fetch created user
     const user = await db("users")
@@ -233,6 +285,33 @@ export const authService = {
       .first() as Admin;
 
     return { admin: safeAdmin, accessToken, refreshToken };
+  },
+
+  async repLogin(data: { repId: string; password: string }): Promise<{ rep: SalesRep; accessToken: string; refreshToken: string }> {
+    const rep = await db("sales_reps")
+      .where("rep_id", data.repId)
+      .first() as SalesRepRecord | undefined;
+
+    if (!rep) {
+      throw new Error("Invalid Identity Number or password");
+    }
+
+    if (!rep.is_active) {
+      throw new Error("Your account has been deactivated. Please contact administrator.");
+    }
+
+    const isPasswordValid = await passwordUtils.comparePassword(data.password, rep.password_hash);
+    if (!isPasswordValid) {
+      throw new Error("Invalid Identity Number or password");
+    }
+
+    const { accessToken, refreshToken } = await this.generateTokensForRep(rep);
+    const safeRep = await db("sales_reps")
+      .select(this.getSalesRepPublicColumns())
+      .where("id", rep.id)
+      .first() as SalesRep;
+
+    return { rep: safeRep, accessToken, refreshToken };
   },
 
   // Refresh access token
@@ -311,6 +390,43 @@ export const authService = {
     return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   },
 
+  async refreshRepAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+    const payload = jwtUtils.verifyRefreshToken(refreshToken);
+
+    if (payload.role !== "sales_rep") {
+      throw new Error("Invalid sales rep refresh token");
+    }
+
+    const tokenRecord = await db("sales_rep_refresh_tokens")
+      .where("token", refreshToken)
+      .where("rep_id", payload.userId)
+      .where("is_revoked", false)
+      .first();
+
+    if (!tokenRecord) {
+      throw new Error("Invalid or revoked refresh token");
+    }
+
+    if (new Date() > new Date(tokenRecord.expires_at)) {
+      throw new Error("Refresh token has expired");
+    }
+
+    const rep = await db("sales_reps")
+      .select(this.getSalesRepPublicColumns())
+      .where("id", payload.userId)
+      .first() as SalesRep;
+
+    if (!rep) {
+      throw new Error("Sales rep not found");
+    }
+
+    const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await this.generateTokensForRep(rep);
+
+    await db("sales_rep_refresh_tokens").where("id", tokenRecord.id).update({ is_revoked: true });
+
+    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+  },
+
   // Submit wholesale application
   async submitWholesaleApplication(data: WholesaleApplicationRequest): Promise<WholesaleApplication> {
     const monthlyVolume = typeof data.monthlyVolume === "number"
@@ -328,8 +444,17 @@ export const authService = {
       throw new Error("You already have a pending or approved application");
     }
 
+    // Look up sales rep if ID provided
+    let salesRepId = null;
+    if (data.repId?.trim()) {
+      const rep = await db("sales_reps").where("rep_id", data.repId.trim()).first();
+      if (rep) {
+        salesRepId = rep.id;
+      }
+    }
+
     // Create application
-    const insertedApplication = await db("wholesale_applications")
+    const [applicationId] = await db("wholesale_applications")
       .insert({
         business_name: data.businessName,
         contact_name: data.contactName,
@@ -338,11 +463,9 @@ export const authService = {
         business_type: data.businessType,
         monthly_volume: monthlyVolume,
         source,
+        sales_rep_id: salesRepId,
         status: "pending"
-      })
-      .returning("id");
-
-    const applicationId = (insertedApplication[0] as InsertIdRow).id;
+      });
 
     // Fetch created application
     const application = await db("wholesale_applications")
@@ -412,7 +535,7 @@ export const authService = {
     if (!user) {
       // Create new wholesale user
       const passwordHash = await passwordUtils.hashPassword(password);
-      const insertedUser = await db("users")
+      const [userId] = await db("users")
         .insert({
           first_name: application.contact_name.split(" ")[0] || application.contact_name,
           last_name: application.contact_name.split(" ").slice(1).join(" ") || "User",
@@ -421,11 +544,9 @@ export const authService = {
           company: application.business_name,
           password_hash: passwordHash,
           role: "wholesale",
+          sales_rep_id: (application as any).sales_rep_id,
           is_approved: true
-        })
-        .returning("id");
-
-      const userId = (insertedUser[0] as InsertIdRow).id;
+        });
 
       user = await db("users")
         .select(this.getUserPublicColumns())
@@ -485,8 +606,24 @@ export const authService = {
 
   async getAllUsers(): Promise<User[]> {
     const users = await db("users")
-      .select(this.getUserPublicColumns())
+      .select([
+        "id", "first_name", "last_name", "email", "phone", 
+        "company", "role", "is_approved", "created_at", "updated_at"
+      ])
       .orderBy("created_at", "desc") as User[];
     return users;
+  },
+
+  async updateProfile(userId: number, data: { first_name?: string; last_name?: string; phone?: string }): Promise<User> {
+    await db("users")
+      .where("id", userId)
+      .update({
+        ...data,
+        updated_at: db.fn.now()
+      });
+
+    const user = await this.getUserById(userId);
+    if (!user) throw new Error("User not found after update");
+    return user;
   }
 };

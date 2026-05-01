@@ -11,7 +11,10 @@ export const createProduct = async (req: Request, res: Response) => {
   try {
     const body = req.body;
     const { valid, errors } = productValidation.validateCreateProduct(body);
-    if (!valid) return res.status(400).json({ errors });
+    if (!valid) {
+      console.log("Validation Errors:", errors, "Body:", body);
+      return res.status(400).json({ errors });
+    }
 
     if (req.file) {
       body.image = req.file.filename;

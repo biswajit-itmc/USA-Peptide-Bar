@@ -1,38 +1,40 @@
-import pkg from 'pg';
-const { Client } = pkg;
-
-const client = new Client({
-  host: 'localhost',
-  port: 5432,
-  user: 'postgres',
-  password: '1234',
-  database: 'USAPEPTIDE'
-});
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+dotenv.config();
 
 async function checkTable() {
+  let connection;
   try {
-    await client.connect();
-    
-    const result = await client.query(`
+    connection = await mysql.createConnection({
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '3306'),
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'USAPEPTIDE'
+    });
+
+    const dbName = process.env.DB_NAME || 'USAPEPTIDE';
+
+    const [rows] = await connection.query(`
       SELECT column_name, data_type, is_nullable
       FROM information_schema.columns 
-      WHERE table_name = 'eliteselection_products'
+      WHERE table_schema = ? AND table_name = 'eliteselection_products'
       ORDER BY ordinal_position;
-    `);
+    `, [dbName]);
     
-    if (result.rows.length === 0) {
+    if (rows.length === 0) {
       console.log('❌ Table does not exist');
     } else {
       console.log('📋 eliteselection_products columns:');
-      result.rows.forEach(row => {
-        console.log(`   ${row.column_name}: ${row.data_type} ${row.is_nullable === 'NO' ? 'NOT NULL' : ''}`);
+      rows.forEach(row => {
+        console.log(`   ${row.COLUMN_NAME}: ${row.DATA_TYPE} ${row.IS_NULLABLE === 'NO' ? 'NOT NULL' : ''}`);
       });
     }
     
   } catch (error) {
     console.error('❌ Error:', error.message);
   } finally {
-    await client.end();
+    if (connection) await connection.end();
   }
 }
 

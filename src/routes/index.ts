@@ -6,6 +6,8 @@ import wholesaleRoutes from "../modules/wholesale/wholesale.routes.js";
 import contactRoutes from "../modules/contact/contact.route.js";
 import userRouter from "../modules/user/user.routes.js";
 import cartRouter from "../modules/cart/cart.routes.js";
+import orderRouter from "../modules/order/order.routes.js";
+import salesRepRoutes from "../modules/sales-rep/sales-rep.routes.js";
 
 
 export const apiRouter = Router();
@@ -30,6 +32,8 @@ apiRouter.use("/wholesale", wholesaleRoutes);
 
  apiRouter.use("/message", contactRoutes);
  apiRouter.use("/cart", cartRouter);
+ apiRouter.use("/orders", orderRouter);
+ apiRouter.use("/sales-rep", salesRepRoutes);
 
 
 export default apiRouter;

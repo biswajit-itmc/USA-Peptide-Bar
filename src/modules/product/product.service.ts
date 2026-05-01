@@ -7,16 +7,15 @@ export const createProduct = async (body: any) => {
     name: body.name,
     quantity: body.quantity,
     purity: body.purity,
-    price: parseFloat(body.price),
-    old_price: parseFloat(body.old_price),
+    price: parseFloat(String(body.price)),
+    old_price: body.old_price ? parseFloat(String(body.old_price)) : null,
     image: body.image || null,
     // Ek hi table mein wholesale fields 👇
     wholesale_min_qty: body.wholesale_min_qty ? parseInt(body.wholesale_min_qty) : null,
     wholesale_price: body.wholesale_price ? parseFloat(body.wholesale_price) : null
   };
 
-  const result = await db("products").insert(insertData).returning("id");
-  const insertedId = result[0]?.id || result[0];
+  const [insertedId] = await db("products").insert(insertData);
 
   if (!insertedId) {
     throw new Error("Failed to insert product");
