@@ -57,7 +57,7 @@ export const salesRepController = {
   async updateRep(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      await salesRepService.updateRepAdmin(parseInt(id), req.body);
+      await salesRepService.updateRepAdmin(parseInt(id as any), req.body);
       res.json({ success: true, message: "Rep updated successfully" });
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message });
@@ -67,7 +67,7 @@ export const salesRepController = {
   async deleteRep(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      await salesRepService.deleteRepAdmin(parseInt(id));
+      await salesRepService.deleteRepAdmin(parseInt(id as any));
       res.json({ success: true, message: "Rep deleted successfully" });
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message });
@@ -87,7 +87,7 @@ export const salesRepController = {
     try {
       const { orderId } = req.params;
       const { status } = req.body;
-      await salesRepService.updateCommissionStatus(parseInt(orderId), status);
+      await salesRepService.updateCommissionStatus(parseInt(orderId as any), status);
       res.json({ success: true, message: `Commission marked as ${status}` });
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message });
