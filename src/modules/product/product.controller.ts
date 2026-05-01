@@ -49,7 +49,7 @@ export const getAllProducts = async (req: Request, res: Response) => {
 export const getProductById = async (req: Request, res: Response) => {
   try {
     // FIX: [0] hataya gaya hai taaki puri ID pass ho
-    const product = await productService.getProductById(req.params.id); 
+    const product = await productService.getProductById(req.params.id as any); 
     
     if (!product) return res.status(404).json({ message: "Product not found" });
 
@@ -66,7 +66,7 @@ export const updateProduct = async (req: Request, res: Response) => {
     if (req.file) body.image = req.file.filename;
 
     // FIX: [0] hataya gaya hai
-    const product = await productService.updateProduct(req.params.id, body);
+    const product = await productService.updateProduct(req.params.id as any, body);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
     product.image_url = getImageUrl(req, product.image);
@@ -79,7 +79,7 @@ export const updateProduct = async (req: Request, res: Response) => {
 export const deleteProduct = async (req: Request, res: Response) => {
   try {
     // FIX: [0] hataya gaya hai
-    const product = await productService.deleteProduct(req.params.id);
+    const product = await productService.deleteProduct(req.params.id as any);
     if (!product) return res.status(404).json({ message: "Product not found" });
     res.json({ success: true, message: "Deleted successfully", data: product });
   } catch (error) {

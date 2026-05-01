@@ -66,7 +66,7 @@ export const roleMiddleware = (...allowedRoles: ("retail" | "wholesale")[]) => {
       return;
     }
 
-    if (req.user.role === "admin" || !allowedRoles.includes(req.user.role)) {
+    if (req.user.role === "admin" || !allowedRoles.includes(req.user.role as any)) {
       responseHandler.forbidden(res, `Access denied. Only ${allowedRoles.join(", ")} users can access this resource`);
       return;
     }

@@ -62,6 +62,7 @@ export interface SalesRep {
   email: string;
   commission_rate: number;
   role: "sales_rep";
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -105,6 +106,7 @@ export const authService = {
       "email",
       "commission_rate",
       "role",
+      "is_active",
       "created_at",
       "updated_at"
     ];
