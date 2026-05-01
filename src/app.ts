@@ -7,11 +7,30 @@ import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 export const app = express();
 
 // CORS configuration
-app.use(cors({
-  origin: ["https://usapeptidebar.com/"], 
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+const allowedOrigins = [
+  "https://usapeptidebar.com",
+  "https://www.usapeptidebar.com",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175"
+];
+
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow server-to-server tools and same-origin requests with no Origin header.
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error("Not allowed by CORS"));
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   credentials: true
-}));
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
