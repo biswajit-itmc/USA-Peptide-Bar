@@ -12,8 +12,8 @@ const storage = multer.diskStorage({
   },
 });
 
-// file filter (optional)
-const fileFilter = (req: any, file: any, cb: any) => {
+// file filter
+const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith("image/")) {
     cb(null, true);
   } else {
@@ -21,4 +21,11 @@ const fileFilter = (req: any, file: any, cb: any) => {
   }
 };
 
-export const upload = multer({ storage, fileFilter });
+// ✅ FIX ADDED HERE
+export const upload = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024
+  }
+});
