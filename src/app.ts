@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import path from "path"; // 👈 path import karein
+import path from "path";
 import { apiRouter } from "./routes/index.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 
@@ -32,14 +32,14 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+/* ✅ BODY SIZE FIX (413 ERROR SOLVE) */
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// 🔥 1. YEH LINE ADD KAREIN (Images dikhane ke liye)
-// Iska matlab: Agar koi browser mein "/uploads" par jaye, toh use "uploads" folder ki files dikhao
+/* ✅ STATIC FILES */
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-// Welcome Route
+/* Routes */
 app.get("/", (_req, res) => {
   res.status(200).json({
     success: true,
@@ -47,12 +47,9 @@ app.get("/", (_req, res) => {
   });
 });
 
-// API Routes
 app.get("/api/check", (req, res) => res.send("System OK"));
 app.use("/api", apiRouter);
 
-// 404 handler
+/* Error handlers */
 app.use(notFoundHandler);
-
-// Error handler (hamesha last mein)
 app.use(errorHandler);
