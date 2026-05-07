@@ -30,7 +30,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+
 
 /* ✅ BODY SIZE FIX (413 ERROR SOLVE) */
 app.use(express.json({ limit: "50mb" }));
