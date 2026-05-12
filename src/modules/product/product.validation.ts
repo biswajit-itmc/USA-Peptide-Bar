@@ -6,6 +6,24 @@ export interface ProductRequest {
   price: number;
   old_price: number;
   image?: string;
+  position?: number;
+  description?: string;
+  intended_use?: string;
+  storage?: string;
+  solubility?: string;
+  vial_size?: string;
+  shelf_life?: string;
+  handling?: string;
+  research_point_1?: string;
+  research_point_2?: string;
+  research_point_3?: string;
+  research_point_4?: string;
+  research_point_5?: string;
+  mechanism_of_action?: string;
+  batch_number?: string;
+  test_date?: string;
+  test_key?: string;
+  lab_name?: string;
 }
 
 export const productValidation = {
@@ -29,6 +47,13 @@ export const productValidation = {
         errors.old_price = "Old price must be a positive number if provided";
       } else if (price > oldPrice) {
         errors.price = "Current price should not be greater than old price";
+      }
+    }
+
+    if (data.position !== undefined && data.position !== null && data.position !== "") {
+      const pos = Number(data.position);
+      if (isNaN(pos)) {
+        errors.position = "Position must be a number";
       }
     }
 

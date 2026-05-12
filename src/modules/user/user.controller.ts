@@ -47,6 +47,19 @@ export const userController = {
     }
   },
 
+  async toggleUserStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { is_active } = req.body;
+      
+      await userService.toggleUserStatus(Number(id), is_active);
+      
+      responseHandler.ok(res, `User status updated to ${is_active ? 'Active' : 'Disabled'}`);
+    } catch (error) {
+      responseHandler.serverError(res, "Failed to update user status");
+    }
+  },
+
   async getAddresses(req: Request, res: Response): Promise<void> {
     try {
       if (!req.user) {

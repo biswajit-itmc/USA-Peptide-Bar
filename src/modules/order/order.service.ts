@@ -5,6 +5,17 @@ export const orderService = {
     return await db.transaction(async (trx) => {
       // Get user's sales rep if any
       const user = await trx("users").where("id", userId).select("sales_rep_id").first();
+      
+      // If no rep assigned to user, check if a manual rep code was provided
+      let finalSalesRepId = user?.sales_rep_id || null;
+      if (!finalSalesRepId && data.repId) {
+        const manualRep = await trx("sales_reps").where("rep_id", data.repId.trim().toUpperCase()).first();
+        if (manualRep) {
+          finalSalesRepId = manualRep.id;
+          // Optionally assign this rep to the user for future orders
+          await trx("users").where("id", userId).update({ sales_rep_id: finalSalesRepId });
+        }
+      }
 
       const [insertedId] = await trx("orders")
         .insert({
@@ -22,7 +33,7 @@ export const orderService = {
           payment_id: data.paymentId,
           total_amount: data.totalAmount,
           status: "pending",
-          sales_rep_id: user?.sales_rep_id || null,
+          sales_rep_id: finalSalesRepId,
           commission_status: "pending",
           created_at: db.fn.now(),
           updated_at: db.fn.now()
@@ -56,7 +67,14 @@ export const orderService = {
   },
 
   async getAllOrders(): Promise<any[]> {
-    const orders = await db("orders").orderBy("created_at", "desc");
+    const orders = await db("orders")
+      .leftJoin("sales_reps", "orders.sales_rep_id", "sales_reps.id")
+      .select(
+        "orders.*",
+        "sales_reps.name as rep_name",
+        "sales_reps.rep_id as rep_identity_number"
+      )
+      .orderBy("orders.created_at", "desc");
     
     // Fetch items for each order
     for (const order of orders) {

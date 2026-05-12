@@ -14,5 +14,6 @@ userRouter.post("/addresses", authMiddleware, userController.addAddress);
 userRouter.delete("/addresses/:id", authMiddleware, userController.deleteAddress);
 
 userRouter.get("/:id", adminAuthMiddleware, userController.getOneUser);
+userRouter.patch("/:id/status", adminAuthMiddleware, userController.toggleUserStatus);
 
 export default userRouter;

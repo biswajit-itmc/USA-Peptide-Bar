@@ -14,6 +14,7 @@ export interface User {
   company: string | null;
   role: "retail" | "wholesale";
   is_approved: boolean;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -82,6 +83,7 @@ export const authService = {
       "company",
       "role",
       "is_approved",
+      "is_active",
       "created_at",
       "updated_at"
     ];
@@ -250,6 +252,11 @@ export const authService = {
       throw new Error("Invalid email or password");
     }
 
+    // Check if user is active
+    if (!user.is_active) {
+      throw new Error("Your account has been deactivated. Please contact administrator.");
+    }
+
     // Check if wholesale user is approved
     if (user.role === "wholesale" && !user.is_approved) {
       throw new Error("Your wholesale account is pending approval");
@@ -344,6 +351,10 @@ export const authService = {
       .first() as User;
     if (!user) {
       throw new Error("User not found");
+    }
+
+    if (!user.is_active) {
+      throw new Error("Your account has been deactivated");
     }
 
     // Generate new tokens

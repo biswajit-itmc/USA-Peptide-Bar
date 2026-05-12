@@ -12,9 +12,14 @@ export const userService = {
       "company",
       "role",
       "is_approved",
+      "is_active",
       "created_at",
       "updated_at"
     ];
+  },
+
+  async toggleUserStatus(id: number, isActive: boolean): Promise<void> {
+    await db("users").where("id", id).update({ is_active: isActive });
   },
 
   async getAllUsers(): Promise<User[]> {

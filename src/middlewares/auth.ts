@@ -25,8 +25,8 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction):
 
     const payload = jwtUtils.verifyToken(token);
 
-    if (payload.role !== "retail" && payload.role !== "wholesale") {
-      responseHandler.forbidden(res, `Access denied. Only customers can access this resource.`);
+    if (payload.role !== "retail" && payload.role !== "wholesale" && payload.role !== "admin" && payload.role !== "sales_rep") {
+      responseHandler.forbidden(res, `Access denied. Invalid role for this resource.`);
       return;
     }
 
