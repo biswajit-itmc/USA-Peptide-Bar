@@ -8,7 +8,8 @@ export const app = express();
 
 // CORS configuration
 const allowedOrigins = [
-  "https://usapeptidebar.com"];
+  "https://usapeptidebar.com"
+];
 
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {

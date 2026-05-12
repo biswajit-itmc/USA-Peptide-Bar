@@ -24,15 +24,25 @@ export const userService = {
 
   async getAllUsers(): Promise<User[]> {
     return await db("users")
-      .select(this.getUserPublicColumns())
-      .orderBy("created_at", "desc") as User[];
+      .leftJoin("sales_reps", "users.sales_rep_id", "sales_reps.id")
+      .select([
+        ...this.getUserPublicColumns().map(col => `users.${col}`),
+        "sales_reps.name as rep_name",
+        "sales_reps.rep_id as rep_identity_number"
+      ])
+      .orderBy("users.created_at", "desc") as User[];
   },
 
   async getWholesaleUsers(): Promise<User[]> {
     return await db("users")
-      .select(this.getUserPublicColumns())
-      .where("role", "wholesale")
-      .orderBy("created_at", "desc") as User[];
+      .leftJoin("sales_reps", "users.sales_rep_id", "sales_reps.id")
+      .select([
+        ...this.getUserPublicColumns().map(col => `users.${col}`),
+        "sales_reps.name as rep_name",
+        "sales_reps.rep_id as rep_identity_number"
+      ])
+      .where("users.role", "wholesale")
+      .orderBy("users.created_at", "desc") as User[];
   },
 
   async getUserById(id: number): Promise<User | undefined> {
