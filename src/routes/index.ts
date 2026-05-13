@@ -13,7 +13,7 @@ import couponRouter from "../modules/coupon/coupon.routes.js";
 
 export const apiRouter = Router();
 
-// ✅ Health Check
+// ✅ Health Checkk
 apiRouter.get("/health", (_req, res) => {
   res.status(200).json({
     success: true,
