@@ -14,8 +14,12 @@ router.get("/admin/reps", adminAuthMiddleware, salesRepController.getAllRepsAdmi
 router.post("/admin/reps", adminAuthMiddleware, salesRepController.createRep);
 router.put("/admin/reps/:id", adminAuthMiddleware, salesRepController.updateRep);
 router.delete("/admin/reps/:id", adminAuthMiddleware, salesRepController.deleteRep);
+router.get("/admin/reps/:id/details", adminAuthMiddleware, salesRepController.getRepDetailsAdmin);
+
 
 router.get("/admin/commissions", adminAuthMiddleware, salesRepController.getAllCommissions);
+router.get("/admin/commissions/:orderId", adminAuthMiddleware, salesRepController.getCommissionDetails);
 router.put("/admin/commissions/:orderId/status", adminAuthMiddleware, salesRepController.updateCommissionStatus);
+
 
 export default router;

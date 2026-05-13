@@ -3,7 +3,9 @@ import { passwordUtils } from "../../utils/password.js";
 import { jwtUtils } from "../../utils/jwt.js";
 import type { SignupRetailRequest, LoginRequest, AdminLoginRequest, WholesaleApplicationRequest } from "./auth.validation.js";
 import { sendApprovalEmail } from "../../utils/mailer.js";
-import { sendRejectionEmail } from "../../utils/mailer.js";
+import { sendRejectionEmail, sendResetPasswordEmail } from "../../utils/mailer.js";
+import crypto from "crypto";
+
 
 export interface User {
   id: number;
@@ -460,7 +462,11 @@ export const authService = {
     // Look up sales rep if ID provided
     let salesRepId = null;
     if (data.repId?.trim()) {
-      const rep = await db("sales_reps").where("rep_id", data.repId.trim()).first();
+      const rep = await db("sales_reps")
+        .where("rep_id", data.repId.trim())
+        .where("is_active", true)
+        .first();
+
       if (rep) {
         salesRepId = rep.id;
       }
@@ -638,5 +644,88 @@ export const authService = {
     const user = await this.getUserById(userId);
     if (!user) throw new Error("User not found after update");
     return user;
+  },
+
+  async requestPasswordReset(email: string, role: string): Promise<void> {
+    // 1. Verify user exists in the correct table
+    let user;
+    if (role === "sales_rep") {
+      user = await db("sales_reps").where("email", email).first();
+    } else if (role === "retail" || role === "wholesale") {
+      user = await db("users").where("email", email).where("role", role).first();
+    } else if (role === "admin") {
+       user = await db("admins").where("email", email).first();
+    } else {
+      throw new Error("Invalid role");
+    }
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // 2. Generate token
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
+
+    // 3. Store token (delete existing ones for this email/role first)
+    await db("password_reset_tokens").where({ email, role }).del();
+    await db("password_reset_tokens").insert({
+      email,
+      token,
+      role,
+      expires_at: expiresAt
+    });
+
+    // 4. Send email
+    await sendResetPasswordEmail(email, token, role);
+  },
+
+  async resetPassword(token: string, role: string, newPassword: string): Promise<void> {
+    // 1. Verify token
+    const resetRecord = await db("password_reset_tokens")
+      .where("token", token)
+      .where("role", role)
+      .first();
+
+    if (!resetRecord) {
+      throw new Error("Invalid or expired token");
+    }
+
+    if (new Date() > new Date(resetRecord.expires_at)) {
+      await db("password_reset_tokens").where("id", resetRecord.id).del();
+      throw new Error("Token has expired");
+    }
+
+    // 2. Hash new password
+    const passwordHash = await passwordUtils.hashPassword(newPassword);
+
+    // 3. Update password in the correct table
+    if (role === "sales_rep") {
+      await db("sales_reps").where("email", resetRecord.email).update({ password_hash: passwordHash });
+    } else if (role === "admin") {
+      await db("admins").where("email", resetRecord.email).update({ password_hash: passwordHash });
+    } else {
+      await db("users").where("email", resetRecord.email).where("role", role).update({ password_hash: passwordHash });
+    }
+
+    // 4. Delete the used token
+    await db("password_reset_tokens").where("id", resetRecord.id).del();
+  },
+
+  async loginAsUser(userId: number): Promise<{ user: any; accessToken: string; refreshToken: string }> {
+    const user = await db("users").where("id", userId).first();
+    if (!user) throw new Error("User not found");
+
+    const tokens = await this.generateTokensForUser(user);
+    await this.storeRefreshToken(user.id, tokens.refreshToken);
+
+    const { password_hash, ...userProfile } = user;
+    return {
+      user: userProfile,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken
+    };
   }
 };
+
+

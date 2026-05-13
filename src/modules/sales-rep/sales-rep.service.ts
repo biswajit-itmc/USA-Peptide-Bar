@@ -95,6 +95,21 @@ export const salesRepService = {
     return await db("sales_reps").where("id", id).del();
   },
 
+  async getRepDetailsAdmin(id: number) {
+    const stats = await this.getRepStats(id);
+    const clients = await this.getRepClients(id);
+    const orders = await this.getRepOrders(id);
+    const rep = await db("sales_reps").where("id", id).first();
+
+    return {
+      rep,
+      stats,
+      clients,
+      orders
+    };
+  },
+
+
   async getAllCommissionsAdmin() {
     const orders = await db("orders")
       .whereNotNull("sales_rep_id")
@@ -112,6 +127,30 @@ export const salesRepService = {
       calculated_commission: parseFloat(order.total_amount) * parseFloat(order.rep_rate)
     }));
   },
+
+  async getCommissionDetailsAdmin(orderId: number) {
+    const order = await db("orders")
+      .where("orders.id", orderId)
+      .join("sales_reps", "orders.sales_rep_id", "=", "sales_reps.id")
+      .select(
+        "orders.*",
+        "sales_reps.name as rep_name",
+        "sales_reps.rep_id as rep_identity_number",
+        "sales_reps.commission_rate as rep_rate"
+      )
+      .first();
+
+    if (!order) throw new Error("Order not found");
+
+    const items = await db("order_items").where("order_id", orderId);
+    
+    return {
+      ...order,
+      items,
+      calculated_commission: parseFloat(order.total_amount) * parseFloat(order.rep_rate)
+    };
+  },
+
 
   async updateCommissionStatus(orderId: number, status: string) {
     const updateData: any = { commission_status: status };

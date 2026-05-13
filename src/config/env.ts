@@ -25,5 +25,7 @@ export const env = {
     jwtSecret: required(process.env.JWT_SECRET, "JWT_SECRET"),
     jwtExpiration: process.env.JWT_EXPIRATION ?? "24h",
     bcryptRounds: Number(process.env.BCRYPT_ROUNDS ?? 10)
-  }
+  },
+  frontendUrl: process.env.FRONTEND_URL ?? "http://localhost:5173"
 };
+

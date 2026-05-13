@@ -13,6 +13,9 @@ authRouter.post("/admin/refresh", authController.refreshAdminAccessToken);
 authRouter.post("/rep/login", authController.repLogin);
 authRouter.post("/rep/refresh", authController.repRefreshAccessToken);
 authRouter.post("/wholesale/apply", authController.submitWholesaleApplication);
+authRouter.post("/forgot-password", authController.forgotPassword);
+authRouter.post("/reset-password", authController.resetPassword);
+
 
 // Protected routes - Authenticated users
 authRouter.get("/me", authMiddleware, authController.getCurrentUser);
@@ -40,3 +43,5 @@ authRouter.get("/admin/applications", adminAuthMiddleware, authController.getAll
 authRouter.get("/admin/applications/:id", adminAuthMiddleware, authController.getWholesaleApplicationById);
 authRouter.post("/admin/applications/:id/approve", adminAuthMiddleware, authController.approveWholesaleApplication);
 authRouter.post("/admin/applications/:id/reject", adminAuthMiddleware, authController.rejectWholesaleApplication);
+authRouter.post("/admin/login-as/:userId", adminAuthMiddleware, authController.loginAsUser);
+

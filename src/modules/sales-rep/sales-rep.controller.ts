@@ -74,6 +74,17 @@ export const salesRepController = {
     }
   },
 
+  async getRepDetailsAdmin(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const details = await salesRepService.getRepDetailsAdmin(parseInt(id as any));
+      res.json({ success: true, data: details });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
+
   async getAllCommissions(req: Request, res: Response) {
     try {
       const commissions = await salesRepService.getAllCommissionsAdmin();
@@ -82,6 +93,17 @@ export const salesRepController = {
       res.status(500).json({ success: false, message: error.message });
     }
   },
+
+  async getCommissionDetails(req: Request, res: Response) {
+    try {
+      const { orderId } = req.params;
+      const details = await salesRepService.getCommissionDetailsAdmin(parseInt(orderId as any));
+      res.json({ success: true, data: details });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
+
 
   async updateCommissionStatus(req: Request, res: Response) {
     try {

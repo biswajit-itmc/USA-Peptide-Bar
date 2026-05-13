@@ -1,4 +1,6 @@
 import { db } from "../../db/knex.js";
+import { sendOrderCompletionEmail, sendOrderCancellationEmail } from "../../utils/mailer.js";
+
 
 export const orderService = {
   async createOrder(userId: number, data: any, items: any[]): Promise<any> {
@@ -9,7 +11,11 @@ export const orderService = {
       // If no rep assigned to user, check if a manual rep code was provided
       let finalSalesRepId = user?.sales_rep_id || null;
       if (!finalSalesRepId && data.repId) {
-        const manualRep = await trx("sales_reps").where("rep_id", data.repId.trim().toUpperCase()).first();
+        const manualRep = await trx("sales_reps")
+          .where("rep_id", data.repId.trim().toUpperCase())
+          .where("is_active", true)
+          .first();
+
         if (manualRep) {
           finalSalesRepId = manualRep.id;
           // Optionally assign this rep to the user for future orders
@@ -93,7 +99,30 @@ export const orderService = {
       });
 
     const updatedOrder = await db("orders").where("id", orderId).first();
+    const items = await db("order_items").where("order_id", orderId);
+
+    if (updatedOrder) {
+      if (status === 'completed') {
+        await sendOrderCompletionEmail(
+          updatedOrder.email, 
+          updatedOrder.id, 
+          updatedOrder.full_name,
+          items,
+          updatedOrder.total_amount
+        );
+      } else if (status === 'cancelled' || status === 'rejected') {
+        await sendOrderCancellationEmail(
+          updatedOrder.email, 
+          updatedOrder.id, 
+          updatedOrder.full_name,
+          items,
+          updatedOrder.total_amount
+        );
+      }
+    }
+
       
     return updatedOrder;
   }
 };
+

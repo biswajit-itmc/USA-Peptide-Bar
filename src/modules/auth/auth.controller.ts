@@ -409,4 +409,63 @@ async updateProfile(req: Request, res: Response): Promise<void> {
     responseHandler.serverError(res, message);
   }
 },
+
+async forgotPassword(req: Request, res: Response): Promise<void> {
+  try {
+    const { email, role } = req.body;
+
+    if (!email || !role) {
+      responseHandler.badRequest(res, "Email and role are required");
+      return;
+    }
+
+    await authService.requestPasswordReset(email, role);
+
+    responseHandler.ok(res, "Password reset link sent to your email");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to process forgot password request";
+    if (message === "User not found") {
+       responseHandler.notFound(res, message);
+       return;
+    }
+    responseHandler.serverError(res, message);
+  }
+},
+
+async resetPassword(req: Request, res: Response): Promise<void> {
+  try {
+    const { token, role, password } = req.body;
+
+    if (!token || !role || !password) {
+      responseHandler.badRequest(res, "Token, role, and password are required");
+      return;
+    }
+
+    await authService.resetPassword(token, role, password);
+
+    responseHandler.ok(res, "Password has been reset successfully");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to reset password";
+    responseHandler.badRequest(res, message);
+  }
+},
+
+async loginAsUser(req: Request, res: Response): Promise<void> {
+  try {
+    const { userId } = req.params;
+
+    const result = await authService.loginAsUser(Number(userId));
+
+    responseHandler.ok(res, "Login as user successful", {
+      user: result.user,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Impersonation failed";
+    responseHandler.serverError(res, message);
+  }
+},
 };
+
+
