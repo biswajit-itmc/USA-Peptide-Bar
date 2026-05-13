@@ -6,7 +6,7 @@ import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 
 export const app = express();
 
-// CORS configuration
+// CORS configurationn
 const allowedOrigins = [
   "https://usapeptidebar.com",
   "https://www.usapeptidebar.com",
