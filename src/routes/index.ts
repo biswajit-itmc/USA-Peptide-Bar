@@ -17,7 +17,8 @@ export const apiRouter = Router();
 apiRouter.get("/health", (_req, res) => {
   res.status(200).json({
     success: true,
-    message: "API is running",
+    message: "API is running v2",
+
     timestamp: new Date().toISOString()
   });
 });
