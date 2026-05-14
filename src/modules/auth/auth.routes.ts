@@ -44,4 +44,6 @@ authRouter.get("/admin/applications/:id", adminAuthMiddleware, authController.ge
 authRouter.post("/admin/applications/:id/approve", adminAuthMiddleware, authController.approveWholesaleApplication);
 authRouter.post("/admin/applications/:id/reject", adminAuthMiddleware, authController.rejectWholesaleApplication);
 authRouter.post("/admin/login-as/:userId", adminAuthMiddleware, authController.loginAsUser);
+authRouter.post("/admin/rep-login-as/:repId", adminAuthMiddleware, authController.loginAsRep);
+
 

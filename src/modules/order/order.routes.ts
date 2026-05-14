@@ -9,5 +9,8 @@ orderRouter.post("/", authMiddleware, upload.single('screenshot'), orderControll
 orderRouter.get("/history", authMiddleware, orderController.getOrderHistory);
 orderRouter.get("/admin/all", adminAuthMiddleware, orderController.getAllOrders);
 orderRouter.patch("/:id/status", adminAuthMiddleware, orderController.updateOrderStatus);
+orderRouter.patch("/:id", adminAuthMiddleware, orderController.updateOrderAdmin);
+orderRouter.delete("/:id", adminAuthMiddleware, orderController.deleteOrderAdmin);
+
 
 export default orderRouter;

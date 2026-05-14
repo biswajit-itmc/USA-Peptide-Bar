@@ -13,11 +13,12 @@ import couponRouter from "../modules/coupon/coupon.routes.js";
 
 export const apiRouter = Router();
 
-// ✅ Health Checkk
+// ✅ Health Check
 apiRouter.get("/health", (_req, res) => {
   res.status(200).json({
     success: true,
-    message: "API is running v2",
+    message: "API is running",
+
 
     timestamp: new Date().toISOString()
   });

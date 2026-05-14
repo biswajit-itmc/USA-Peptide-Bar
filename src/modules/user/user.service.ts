@@ -45,16 +45,48 @@ export const userService = {
       .orderBy("users.created_at", "desc") as User[];
   },
 
-  async getUserById(id: number): Promise<User | undefined> {
-    return await db("users")
-      .select(this.getUserPublicColumns())
-      .where("id", id)
-      .first() as User | undefined;
+  async getUserFullDetailsAdmin(id: number) {
+    const user = await db("users")
+      .leftJoin("sales_reps", "users.sales_rep_id", "sales_reps.id")
+      .select([
+        ...this.getUserPublicColumns().map(col => `users.${col}`),
+        "sales_reps.name as rep_name",
+        "sales_reps.rep_id as rep_identity_number"
+      ])
+      .where("users.id", id)
+      .first();
+
+    if (!user) return null;
+
+    const orders = await db("orders")
+      .where("user_id", id)
+      .orderBy("created_at", "desc");
+
+    for (const order of orders) {
+      order.items = await db("order_items")
+        .join("products", "order_items.product_id", "products.id")
+        .select("order_items.*", "products.name as product_name", "products.image_url")
+        .where("order_id", order.id);
+    }
+
+    const addresses = await this.getAddresses(id);
+
+    return {
+      user,
+      orders,
+      addresses
+    };
   },
+
 
   async deleteUser(id: number): Promise<void> {
     await db("users").where("id", id).del();
   },
+
+  async updateUser(id: number, data: any): Promise<void> {
+    await db("users").where("id", id).update(data);
+  },
+
 
   // ✅ Address Management
   async getAddresses(userId: number): Promise<any[]> {

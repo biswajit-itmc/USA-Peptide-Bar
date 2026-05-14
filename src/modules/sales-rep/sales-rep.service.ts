@@ -1,4 +1,7 @@
 import { db } from "../../db/knex.js";
+import bcrypt from "bcryptjs";
+import { sendSalesRepWelcomeEmail } from "../../utils/mailer.js";
+
 
 export const salesRepService = {
   async getRepByRepId(repId: string) {
@@ -67,8 +70,8 @@ export const salesRepService = {
 
   async createRepAdmin(data: any) {
     const { password, ...repData } = data;
-    const bcrypt = await import("bcryptjs");
-    const passwordHash = await bcrypt.default.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
+
     
     const [id] = await db("sales_reps")
       .insert({
@@ -76,16 +79,21 @@ export const salesRepService = {
         password_hash: passwordHash,
         role: "sales_rep"
       });
+
+    // Send welcome email with credentials
+    await sendSalesRepWelcomeEmail(repData.email, repData.name, repData.rep_id, password);
+
       
     return id;
   },
+
 
   async updateRepAdmin(id: number, data: any) {
     const { password, ...updateData } = data;
     
     if (password) {
-      const bcrypt = await import("bcryptjs");
-      updateData.password_hash = await bcrypt.default.hash(password, 10);
+      updateData.password_hash = await bcrypt.hash(password, 10);
+
     }
     
     return await db("sales_reps").where("id", id).update(updateData);

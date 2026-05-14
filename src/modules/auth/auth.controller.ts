@@ -450,22 +450,40 @@ async resetPassword(req: Request, res: Response): Promise<void> {
   }
 },
 
-async loginAsUser(req: Request, res: Response): Promise<void> {
-  try {
-    const { userId } = req.params;
+  async loginAsUser(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
 
-    const result = await authService.loginAsUser(Number(userId));
+      const result = await authService.loginAsUser(Number(userId));
 
-    responseHandler.ok(res, "Login as user successful", {
-      user: result.user,
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Impersonation failed";
-    responseHandler.serverError(res, message);
-  }
-},
+      responseHandler.ok(res, "Login as user successful", {
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Impersonation failed";
+      responseHandler.serverError(res, message);
+    }
+  },
+
+  async loginAsRep(req: Request, res: Response): Promise<void> {
+    try {
+      const { repId } = req.params;
+
+      const result = await authService.loginAsRep(Number(repId));
+
+      responseHandler.ok(res, "Login as sales rep successful", {
+        rep: result.rep,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Impersonation failed";
+      responseHandler.serverError(res, message);
+    }
+  },
 };
+
 
 

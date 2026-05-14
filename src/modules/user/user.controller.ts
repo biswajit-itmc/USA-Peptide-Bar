@@ -34,18 +34,19 @@ export const userController = {
   async getOneUser(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const user = await userService.getUserById(Number(id));
+      const details = await userService.getUserFullDetailsAdmin(Number(id));
       
-      if (!user) {
+      if (!details) {
         responseHandler.notFound(res, "User not found");
         return;
       }
       
-      responseHandler.ok(res, "User retrieved successfully", user);
+      responseHandler.ok(res, "User details retrieved successfully", details);
     } catch (error) {
-      responseHandler.serverError(res, "Error fetching user");
+      responseHandler.serverError(res, "Error fetching user details");
     }
   },
+
 
   async toggleUserStatus(req: Request, res: Response): Promise<void> {
     try {
@@ -98,5 +99,25 @@ export const userController = {
     } catch (error) {
       responseHandler.serverError(res, "Failed to delete address");
     }
+  },
+
+  async updateUserAdmin(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      await userService.updateUser(Number(id), req.body);
+      responseHandler.ok(res, "User updated successfully");
+    } catch (error) {
+      responseHandler.serverError(res, "Failed to update user");
+    }
+  },
+
+  async deleteUserAdmin(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      await userService.deleteUser(Number(id));
+      responseHandler.ok(res, "User deleted successfully");
+    } catch (error) {
+      responseHandler.serverError(res, "Failed to delete user");
+    }
   }
-};
+};

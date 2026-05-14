@@ -199,4 +199,45 @@ export const sendResetPasswordEmail = async (
     console.error("Reset password email failed:", error);
   }
 };
+
+export const sendSalesRepWelcomeEmail = async (
+  to: string,
+  name: string,
+  repId: string,
+  password: string
+) => {
+  try {
+    await transporter.sendMail({
+      from: `"USA Peptide Bar" <${process.env.EMAIL_USER}>`,
+      to,
+      subject: "Your Sales Representative Account",
+      html: `
+        <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+          <h2 style="color: #E11D2E;">Welcome to the Team, ${name}!</h2>
+          <p>Your Sales Representative account has been created successfully.</p>
+
+          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">Login Credentials:</h3>
+            <p><b>Identity ID:</b> <span style="font-family: monospace; background: #eee; padding: 2px 5px; border-radius: 3px;">${repId}</span></p>
+            <p><b>Password:</b> <span style="font-family: monospace; background: #eee; padding: 2px 5px; border-radius: 3px;">${password}</span></p>
+          </div>
+
+          <p>You can login to your dashboard using the link below:</p>
+          <a href="${env.frontendUrl}/account?type=sales" style="padding: 10px 20px; background-color: #E11D2E; color: white; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Login to Dashboard</a>
+
+
+          <p style="margin-top: 30px; font-size: 0.9em; color: #666;">
+            <b>Security Tip:</b> Please change your password after your first login for security purposes.
+          </p>
+
+          <br/>
+          <p>Best Regards,<br/><b>Team USA Peptide Bar</b></p>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error("Sales Rep welcome email failed:", error);
+  }
+};
+
 

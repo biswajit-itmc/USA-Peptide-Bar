@@ -76,5 +76,28 @@ export const orderController = {
       console.error("Update order status error:", error);
       responseHandler.serverError(res, "Failed to update order status");
     }
+  },
+
+  async updateOrderAdmin(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      await orderService.updateOrder(Number(id), req.body);
+      responseHandler.ok(res, "Order updated successfully");
+    } catch (error) {
+      console.error("Update order admin error:", error);
+      responseHandler.serverError(res, "Failed to update order");
+    }
+  },
+
+  async deleteOrderAdmin(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      await orderService.deleteOrder(Number(id));
+      responseHandler.ok(res, "Order deleted successfully");
+    } catch (error) {
+      console.error("Delete order admin error:", error);
+      responseHandler.serverError(res, "Failed to delete order");
+    }
   }
 };
+

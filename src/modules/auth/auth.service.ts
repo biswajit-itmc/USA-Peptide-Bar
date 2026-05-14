@@ -725,7 +725,24 @@ export const authService = {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken
     };
+  },
+
+  async loginAsRep(repId: number): Promise<{ rep: any; accessToken: string; refreshToken: string }> {
+    const rep = await db("sales_reps").where("id", repId).first();
+    if (!rep) throw new Error("Sales rep not found");
+
+    const tokens = await this.generateTokensForRep(rep);
+    await this.storeSalesRepRefreshToken(rep.id, tokens.refreshToken);
+
+    const { password_hash, ...repProfile } = rep;
+    return {
+      rep: repProfile,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken
+    };
   }
 };
+
+
 
 

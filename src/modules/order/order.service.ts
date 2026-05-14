@@ -123,6 +123,23 @@ export const orderService = {
 
       
     return updatedOrder;
+  },
+
+  async updateOrder(orderId: number, data: any): Promise<void> {
+    await db("orders")
+      .where("id", orderId)
+      .update({
+        ...data,
+        updated_at: db.fn.now()
+      });
+  },
+
+  async deleteOrder(orderId: number): Promise<void> {
+    await db.transaction(async (trx) => {
+      await trx("order_items").where("order_id", orderId).del();
+      await trx("orders").where("id", orderId).del();
+    });
   }
 };
+
 
