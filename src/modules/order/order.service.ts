@@ -3,13 +3,16 @@ import { sendOrderCompletionEmail, sendOrderCancellationEmail } from "../../util
 
 
 export const orderService = {
-  async createOrder(userId: number, data: any, items: any[]): Promise<any> {
+  async createOrder(userId: number | null, data: any, items: any[]): Promise<any> {
     return await db.transaction(async (trx) => {
-      // Get user's sales rep if any
-      const user = await trx("users").where("id", userId).select("sales_rep_id").first();
+      // Get user's sales rep if any (only if user is logged in)
+      let finalSalesRepId = null;
+      if (userId) {
+        const user = await trx("users").where("id", userId).select("sales_rep_id").first();
+        finalSalesRepId = user?.sales_rep_id || null;
+      }
       
-      // If no rep assigned to user, check if a manual rep code was provided
-      let finalSalesRepId = user?.sales_rep_id || null;
+      // If no rep assigned yet, check if a manual rep code was provided
       if (!finalSalesRepId && data.repId) {
         const manualRep = await trx("sales_reps")
           .where("rep_id", data.repId.trim().toUpperCase())
@@ -18,8 +21,10 @@ export const orderService = {
 
         if (manualRep) {
           finalSalesRepId = manualRep.id;
-          // Optionally assign this rep to the user for future orders
-          await trx("users").where("id", userId).update({ sales_rep_id: finalSalesRepId });
+          // Optionally assign this rep to the user for future orders (only if logged in)
+          if (userId) {
+            await trx("users").where("id", userId).update({ sales_rep_id: finalSalesRepId });
+          }
         }
       }
 

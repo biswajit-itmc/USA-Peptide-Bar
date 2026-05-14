@@ -5,10 +5,7 @@ import { responseHandler } from "../../utils/response.js";
 export const orderController = {
   async createOrder(req: Request, res: Response): Promise<void> {
     try {
-      if (!req.user) {
-        responseHandler.unauthorized(res, "Not authenticated");
-        return;
-      }
+      const userId = req.user ? req.user.userId : null;
       
       // Since we use FormData, order data is in req.body.data as a JSON string
       const orderData = typeof req.body.data === 'string' ? JSON.parse(req.body.data) : req.body;
@@ -17,7 +14,7 @@ export const orderController = {
       const screenshot = req.file ? req.file.filename : null;
 
       const result = await orderService.createOrder(
-        req.user.userId, 
+        userId, 
         { ...formData, totalAmount, payment_screenshot: screenshot }, 
         items
       );
