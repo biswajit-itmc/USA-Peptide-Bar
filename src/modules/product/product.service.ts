@@ -30,7 +30,8 @@ export const createProduct = async (body: any) => {
     lab_name: body.lab_name || null,
     // Ek hi table mein wholesale fields 👇
     wholesale_min_qty: body.wholesale_min_qty ? parseInt(body.wholesale_min_qty) : null,
-    wholesale_price: body.wholesale_price ? parseFloat(body.wholesale_price) : null
+    wholesale_price: body.wholesale_price ? parseFloat(body.wholesale_price) : null,
+    size: body.size || null
   };
 
   const [insertedId] = await db("products").insert(insertData);
@@ -88,6 +89,7 @@ export const updateProduct = async (id: string | number, body: any) => {
   if (body.test_date !== undefined) updateData.test_date = body.test_date;
   if (body.test_key !== undefined) updateData.test_key = body.test_key;
   if (body.lab_name !== undefined) updateData.lab_name = body.lab_name;
+  if (body.size !== undefined) updateData.size = body.size;
   
   // Wholesale fields update logic 👇
   if (body.wholesale_min_qty !== undefined) updateData.wholesale_min_qty = parseInt(body.wholesale_min_qty);

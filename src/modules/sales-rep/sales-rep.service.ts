@@ -15,11 +15,14 @@ export const salesRepService = {
 
     const totalSales = orders.reduce((sum, order) => sum + parseFloat(order.total_amount || "0"), 0);
     
-    // Get rep's commission rate
+    // Calculate total commission using the rate stored in the order (fallback to current rate if null)
     const rep = await db("sales_reps").where("id", repId).first();
-    const commissionRate = rep ? parseFloat(rep.commission_rate) : 0;
-    
-    const totalCommission = totalSales * commissionRate;
+    const currentRate = rep ? parseFloat(rep.commission_rate) : 0;
+
+    const totalCommission = orders.reduce((sum, order) => {
+      const rate = order.commission_rate !== null ? parseFloat(order.commission_rate) : currentRate;
+      return sum + (parseFloat(order.total_amount || "0") * rate);
+    }, 0);
 
     const activeClients = await db("users")
       .where("sales_rep_id", repId)
@@ -30,7 +33,7 @@ export const salesRepService = {
       totalSales,
       totalCommission,
       activeClients: parseInt(activeClients?.count as string || "0"),
-      commissionRate
+      commissionRate: currentRate
     };
   },
 
@@ -46,9 +49,11 @@ export const salesRepService = {
     // Fetch items for each order
     for (const order of orders) {
       order.items = await db("order_items").where("order_id", order.id);
-      
-      // Calculate commission for this specific order
-      order.commission = parseFloat(order.total_amount || "0") * commissionRate;
+
+      // Calculate commission for this specific order using its stored rate (fallback to current)
+      const rate = order.commission_rate !== null ? parseFloat(order.commission_rate) : commissionRate;
+      order.commission = parseFloat(order.total_amount || "0") * rate;
+      order.used_rate = rate; // Show which rate was used
     }
 
     return orders;
@@ -72,7 +77,7 @@ export const salesRepService = {
     const { password, ...repData } = data;
     const passwordHash = await bcrypt.hash(password, 10);
 
-    
+
     const [id] = await db("sales_reps")
       .insert({
         ...repData,
@@ -83,19 +88,19 @@ export const salesRepService = {
     // Send welcome email with credentials
     await sendSalesRepWelcomeEmail(repData.email, repData.name, repData.rep_id, password);
 
-      
+
     return id;
   },
 
 
   async updateRepAdmin(id: number, data: any) {
     const { password, ...updateData } = data;
-    
+
     if (password) {
       updateData.password_hash = await bcrypt.hash(password, 10);
 
     }
-    
+
     return await db("sales_reps").where("id", id).update(updateData);
   },
 
@@ -130,10 +135,14 @@ export const salesRepService = {
       )
       .orderBy("orders.created_at", "desc");
 
-    return orders.map(order => ({
-      ...order,
-      calculated_commission: parseFloat(order.total_amount) * parseFloat(order.rep_rate)
-    }));
+    return orders.map(order => {
+      const rate = order.commission_rate !== null ? parseFloat(order.commission_rate) : parseFloat(order.rep_rate);
+      return {
+        ...order,
+        calculated_commission: parseFloat(order.total_amount) * rate,
+        effective_rate: rate
+      };
+    });
   },
 
   async getCommissionDetailsAdmin(orderId: number) {
@@ -151,11 +160,14 @@ export const salesRepService = {
     if (!order) throw new Error("Order not found");
 
     const items = await db("order_items").where("order_id", orderId);
-    
+
+    const rate = order.commission_rate !== null ? parseFloat(order.commission_rate) : parseFloat(order.rep_rate);
+
     return {
       ...order,
       items,
-      calculated_commission: parseFloat(order.total_amount) * parseFloat(order.rep_rate)
+      calculated_commission: parseFloat(order.total_amount) * rate,
+      effective_rate: rate
     };
   },
 
@@ -165,7 +177,7 @@ export const salesRepService = {
     if (status === "paid") {
       updateData.commission_paid_at = db.fn.now();
     }
-    
+
     return await db("orders").where("id", orderId).update(updateData);
   }
 };

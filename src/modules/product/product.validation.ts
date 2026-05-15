@@ -24,6 +24,7 @@ export interface ProductRequest {
   test_date?: string;
   test_key?: string;
   lab_name?: string;
+  size?: string;
 }
 
 export const productValidation = {

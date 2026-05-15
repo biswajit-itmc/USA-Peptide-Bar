@@ -1,6 +1,119 @@
 import { env } from "../config/env.js";
 import { transporter } from "../config/mailer.js";
 
+export const sendAdminOrderNotificationEmail = async (
+  orderId: string | number,
+  customerName: string,
+  customerEmail: string,
+  items: any[] = [],
+  totalAmount: string | number = 0
+) => {
+  const itemsHtml = items.map(item => `
+    <tr>
+      <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">$${parseFloat(item.price).toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  try {
+    await transporter.sendMail({
+      from: `"USA Peptide Bar System" <${process.env.EMAIL_USER}>`,
+      to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER,
+      subject: `NEW ORDER ALERT: #${orderId}`,
+      html: `
+        <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+          <h2 style="color: #E11D2E;">New Order Received</h2>
+          <p>Admin, a new order has been placed on the website.</p>
+          
+          <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><b>Order ID:</b> #${orderId}</p>
+            <p><b>Customer Name:</b> ${customerName}</p>
+            <p><b>Customer Email:</b> ${customerEmail}</p>
+            <p><b>Total Amount:</b> $${parseFloat(totalAmount.toString()).toFixed(2)}</p>
+          </div>
+
+          <h3>Order Items:</h3>
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <thead>
+              <tr style="background-color: #f8f8f8;">
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #eee;">Product</th>
+                <th style="padding: 10px; text-align: center; border-bottom: 2px solid #eee;">Qty</th>
+                <th style="padding: 10px; text-align: right; border-bottom: 2px solid #eee;">Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+
+          <p>Please login to the admin dashboard to process this order.</p>
+          <br/>
+          <p>System Notification,<br/><b>USA Peptide Bar</b></p>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error("Admin order notification email failed:", error);
+  }
+};
+
+export const sendOrderConfirmationEmail = async (
+  to: string,
+  orderId: string | number,
+  customerName: string,
+  items: any[] = [],
+  totalAmount: string | number = 0
+) => {
+  const itemsHtml = items.map(item => `
+    <tr>
+      <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">$${parseFloat(item.price).toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  try {
+    await transporter.sendMail({
+      from: `"USA Peptide Bar" <${process.env.EMAIL_USER}>`,
+      to,
+      subject: `Order Confirmation #${orderId} - USA Peptide Bar`,
+      html: `
+        <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+          <h2 style="color: #E11D2E;">Order Received</h2>
+          <p>Hello <b>${customerName}</b>,</p>
+          <p>Thank you for your order! We have received your order <b>#${orderId}</b> and it is currently being processed. Here are the details:</p>
+          
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <thead>
+              <tr style="background-color: #f8f8f8;">
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #eee;">Product</th>
+                <th style="padding: 10px; text-align: center; border-bottom: 2px solid #eee;">Qty</th>
+                <th style="padding: 10px; text-align: right; border-bottom: 2px solid #eee;">Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2" style="padding: 10px; text-align: right; font-weight: bold;">Total Amount:</td>
+                <td style="padding: 10px; text-align: right; font-weight: bold; color: #E11D2E;">$${parseFloat(totalAmount.toString()).toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <p>We will notify you once your order has been approved and shipped.</p>
+          <br/>
+          <p>Best Regards,<br/><b>Team USA Peptide Bar</b></p>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error("Order confirmation email failed:", error);
+  }
+};
+
 export const sendApprovalEmail = async (
 
   to: string,

@@ -1,10 +1,10 @@
 import { db } from "../../db/knex.js";
-import { sendOrderCompletionEmail, sendOrderCancellationEmail } from "../../utils/mailer.js";
+import { sendOrderCompletionEmail, sendOrderCancellationEmail, sendOrderConfirmationEmail, sendAdminOrderNotificationEmail } from "../../utils/mailer.js";
 
 
 export const orderService = {
   async createOrder(userId: number | null, data: any, items: any[]): Promise<any> {
-    return await db.transaction(async (trx) => {
+    const result = await db.transaction(async (trx) => {
       // Get user's sales rep if any (only if user is logged in)
       let finalSalesRepId = null;
       if (userId) {
@@ -28,6 +28,12 @@ export const orderService = {
         }
       }
 
+      let currentCommissionRate = null;
+      if (finalSalesRepId) {
+        const rep = await trx("sales_reps").where("id", finalSalesRepId).select("commission_rate").first();
+        currentCommissionRate = rep?.commission_rate || 0;
+      }
+
       const [insertedId] = await trx("orders")
         .insert({
           user_id: userId,
@@ -45,6 +51,7 @@ export const orderService = {
           total_amount: data.totalAmount,
           status: "pending",
           sales_rep_id: finalSalesRepId,
+          commission_rate: currentCommissionRate,
           commission_status: "pending",
           created_at: db.fn.now(),
           updated_at: db.fn.now()
@@ -59,9 +66,37 @@ export const orderService = {
       }));
 
       await trx("order_items").insert(orderItems);
-
+      
       return { id: insertedId };
     });
+
+    // Send confirmation email after transaction commit
+    try {
+      await sendOrderConfirmationEmail(
+        data.email,
+        result.id,
+        data.fullName,
+        items,
+        data.totalAmount
+      );
+    } catch (emailError) {
+      console.error("Order confirmation email failed:", emailError);
+    }
+
+    // Send admin notification email after transaction commit
+    try {
+      await sendAdminOrderNotificationEmail(
+        result.id,
+        data.fullName,
+        data.email,
+        items,
+        data.totalAmount
+      );
+    } catch (adminEmailError) {
+      console.error("Admin order notification email failed:", adminEmailError);
+    }
+
+    return result;
   },
 
   async getOrderHistory(userId: number): Promise<any[]> {
